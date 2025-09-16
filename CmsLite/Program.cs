@@ -147,7 +147,7 @@ app.MapMethods("/v1/{tenant}/{resource}", new [] { HttpMethods.Head }, async (
     res.ContentType = "application/json";
     res.Headers.ETag = head.Value.ETag;
     res.ContentLength = head.Value.Size;
-    return Results.Ok();
+    return Results.Empty;
 });
 
 app.MapGet("/v1/{tenant}", async (
