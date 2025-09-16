@@ -18,7 +18,7 @@ builder.Services.AddDbContext<CmsLite.Database.CmsLiteDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}");
 });
 builder.Services.AddSingleton(_ => new BlobServiceClient(storageConnectionString));
-builder.Services.AddSingleton<BlobRepo>();
+builder.Services.AddSingleton<IBlobRepo, BlobRepo>();
 
 
 var app = builder.Build();
@@ -34,12 +34,12 @@ using (var scope = app.Services.CreateScope())
 {
     var scopedServices = scope.ServiceProvider;
     var db = scopedServices.GetRequiredService<CmsLite.Database.CmsLiteDbContext>();
-    var blobRepo = scopedServices.GetRequiredService<BlobRepo>();
+    _ = scopedServices.GetRequiredService<IBlobRepo>();
     db.Database.EnsureCreated();
 }
 
 app.MapPut("/v1/{tenant}/{resource}", async (
-    string tenant, string resource, HttpRequest req, CmsLiteDbContext db, BlobRepo blobs) =>
+    string tenant, string resource, HttpRequest req, CmsLiteDbContext db, IBlobRepo blobs) =>
 {
     (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
@@ -114,7 +114,7 @@ app.MapPut("/v1/{tenant}/{resource}", async (
 });
 
 app.MapGet("/v1/{tenant}/{resource}", async (
-    string tenant, string resource, int? version, HttpResponse res, CmsLiteDbContext db, BlobRepo blobs) =>
+    string tenant, string resource, int? version, HttpResponse res, CmsLiteDbContext db, IBlobRepo blobs) =>
 {
     (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
@@ -133,7 +133,7 @@ app.MapGet("/v1/{tenant}/{resource}", async (
 });
 
 app.MapMethods("/v1/{tenant}/{resource}", new [] { HttpMethods.Head }, async (
-    string tenant, string resource, int? version, HttpResponse res, CmsLiteDbContext db, BlobRepo blobs) =>
+    string tenant, string resource, int? version, HttpResponse res, CmsLiteDbContext db, IBlobRepo blobs) =>
 {
     (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
     var latest = await db.ContentItems.SingleOrDefaultAsync(x => x.Tenant == tenant && x.Resource == resource && x.IsDeleted == 0);
