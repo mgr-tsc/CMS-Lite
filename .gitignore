@@ -56,3 +56,4 @@ nunit-*.xml
 WARP.md
 *.http
 .vscode/
+data/
