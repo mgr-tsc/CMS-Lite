@@ -11,6 +11,37 @@ Think of it as a dead-simple **content registry**:
 - Authentication/authorization can be layered in later
 
 ---
+## 🐳 Running Locally with Docker Compose
+
+To run the app and its dependencies locally using Docker Compose:
+
+1. **Build and start the services:**
+
+   ```sh
+   docker compose -f docker/docker-compose.dev.yaml up --build
+   ```
+
+2. **Access the API:**
+
+   The API will be available at [http://localhost:8080](http://localhost:8080).
+
+3. **Health check:**
+
+   You can verify the API is running by visiting [http://localhost:8080/health](http://localhost:8080/health) in your browser or with:
+
+   ```sh
+   curl http://localhost:8080/health
+   ```
+
+4. **Stopping the services:**
+
+   Press `Ctrl+C` in the terminal, or run:
+
+   ```sh
+   docker compose -f docker/docker-compose.dev.yaml down
+   ```
+
+---
 
 ## 📂 Storage Model
 
@@ -60,3 +91,4 @@ Think of it as a dead-simple **content registry**:
     }
   }
 }
+
