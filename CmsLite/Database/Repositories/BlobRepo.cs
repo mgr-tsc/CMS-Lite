@@ -6,7 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 namespace CmsLite.Database.Repositories;
 
-public class BlobRepo
+public class BlobRepo : IBlobRepo
 {
     private readonly BlobContainerClient _container;
 
