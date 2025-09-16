@@ -147,7 +147,7 @@ app.MapMethods("/v1/{tenant}/{resource}", new [] { HttpMethods.Head }, async (
     res.ContentType = "application/json";
     res.Headers.ETag = head.Value.ETag;
     res.ContentLength = head.Value.Size;
-    return Results.Empty;
+    return Results.Ok();
 });
 
 app.MapGet("/v1/{tenant}", async (
@@ -199,3 +199,4 @@ app.MapGet("/v1/{tenant}/{resource}/versions", async (string tenant, string reso
 
 app.UseHttpsRedirection();
 app.Run();
+public partial class Program { }

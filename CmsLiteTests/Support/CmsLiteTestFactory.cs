@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.VisualStudio.TestPlatform.TestHost;
 
 namespace CmsLiteTests.Support;
 
@@ -29,7 +30,7 @@ public class CmsLiteTestFactory : WebApplicationFactory<Program>, IDisposable
         {
             var overrides = new Dictionary<string, string?>
             {
-                ["AzureStorage:ConnectionString"] = "UseDevelopmentStorage=true",
+                ["AzureStorage:ConnectionString"] = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;",
                 ["AzureStorage:Container"] = "cms-test",
                 ["Database:Path"] = "test.db"
             };
