@@ -1,24 +1,26 @@
-version: "3.9"
+# docker/docker-compose.dev.yml (snippet)
+name: cmslite-dev
 services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     command: "azurite --blobHost 0.0.0.0"
-    ports: [ "10000:10000" ]
-    volumes: [ "azurite:/data" ]
+    ports: ["10000:10000"]
+    volumes: ["azurite:/data"]
 
   api:
     build:
       context: ..
       dockerfile: ./Dockerfile
     environment:
-      AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFeq...==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
       AzureStorage__Container: "cms"
       Database__Path: "/data/cms.sqlite"
       ASPNETCORE_ENVIRONMENT: "Development"
-    ports: [ "8080:8080" ]
-    depends_on: [ azurite ]
+      ASPNETCORE_URLS: "http://+:8080"
+    ports: ["8080:8080"]
+    depends_on:
+      - azurite
     volumes:
-      - api_data:/data
+      - ./data:/data
 volumes:
   azurite:
-  api_data:
