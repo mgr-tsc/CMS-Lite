@@ -54,6 +54,7 @@ TestResult.xml
 nunit-*.xml
 
 WARP.md
+CLAUDE.md
 *.http
 .vscode/
 data/
