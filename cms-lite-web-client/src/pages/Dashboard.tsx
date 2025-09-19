@@ -1,7 +1,7 @@
-import { MainLayout } from '../layout'
+import { AppLayout } from '../layout/AppLayout'
 
 export const Dashboard = () => {
   return (
-    <MainLayout />
+    <AppLayout />
   )
 }

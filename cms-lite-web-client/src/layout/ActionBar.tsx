@@ -7,6 +7,7 @@ import {
   DocumentRegular,
   ArrowSyncRegular,
 } from '@fluentui/react-icons'
+import { ACTION_BAR } from './layoutConstants'
 
 const useStyles = makeStyles({
   actionBar: {
@@ -17,10 +18,10 @@ const useStyles = makeStyles({
     padding: tokens.spacingVerticalM,
     backgroundColor: tokens.colorNeutralBackground2,
     borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
-    minHeight: '56px',
-    maxWidth: '1280px',
-    margin: '0 auto',
+    minHeight: `${ACTION_BAR.HEIGHT}px`,
     width: '100%',
+    zIndex: ACTION_BAR.Z_INDEX,
+    boxSizing: 'border-box',
   },
   buttonGroup: {
     display: 'flex',

@@ -1,3 +1,9 @@
+html {
+  overflow-x: hidden; /* Prevent horizontal scrolling at root level */
+  width: 100vw;
+  box-sizing: border-box;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -28,6 +34,9 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden; /* Prevent horizontal scrolling globally */
+  width: 100vw;
+  box-sizing: border-box;
 }
 
 h1 {

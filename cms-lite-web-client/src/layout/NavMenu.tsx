@@ -10,25 +10,26 @@ import {
   ChevronRightRegular,
   ChevronDownRegular,
 } from '@fluentui/react-icons'
+import { NAV_MENU, ANIMATIONS } from './layoutConstants'
 
 const useStyles = makeStyles({
   navMenu: {
     position: 'fixed',
-    top: '140px', // Header (~80px) + ActionBar (~56px) + padding
+    top: `${NAV_MENU.TOP_OFFSET}px`,
     left: '0',
-    bottom: '80px', // Footer height + padding
+    bottom: `${NAV_MENU.BOTTOM_OFFSET}px`,
     backgroundColor: tokens.colorNeutralBackground1,
     borderRight: `1px solid ${tokens.colorNeutralStroke1}`,
     padding: tokens.spacingVerticalM,
     overflowY: 'auto',
-    transition: 'width 0.3s ease',
-    zIndex: 10,
+    transition: ANIMATIONS.NAV_MENU_TRANSITION,
+    zIndex: NAV_MENU.Z_INDEX,
   },
   expanded: {
-    width: '300px',
+    width: `${NAV_MENU.EXPANDED_WIDTH}px`,
   },
   collapsed: {
-    width: '60px',
+    width: `${NAV_MENU.COLLAPSED_WIDTH}px`,
   },
   header: {
     padding: tokens.spacingVerticalS,

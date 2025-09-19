@@ -6,6 +6,11 @@ import { Footer } from './Footer'
 import { ActionBar } from './ActionBar'
 import { NavMenu } from './NavMenu'
 import { FileListView } from './FileListView'
+import {
+  MAIN_CONTENT,
+  ANIMATIONS,
+  getMainContentMarginLeft
+} from './layoutConstants'
 
 const useStyles = makeStyles({
   container: {
@@ -13,6 +18,8 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     minHeight: '100vh',
     backgroundColor: tokens.colorNeutralBackground1,
+    overflowX: 'hidden', // Prevent horizontal scrolling
+    width: '100vw',
   },
   content: {
     flex: 1,
@@ -23,17 +30,19 @@ const useStyles = makeStyles({
     flex: 1,
     display: 'flex',
     minHeight: 0,
+    overflowX: 'hidden', // Prevent horizontal overflow
   },
   mainContent: {
     flex: 1,
-    padding: tokens.spacingVerticalXL,
+    padding: `${MAIN_CONTENT.PADDING}px`,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
-    maxWidth: '1280px',
     margin: '0 auto',
     width: '100%',
     overflow: 'auto',
+    transition: ANIMATIONS.CONTENT_TRANSITION,
+    boxSizing: 'border-box',
   },
   contentArea: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -127,7 +136,14 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       <Header onToggleNavMenu={handleToggleNavMenu} />
 
       <div className={styles.content}>
-        <div style={{ marginLeft: isNavMenuCollapsed ? '60px' : '300px' }}>
+        <div
+          style={{
+            marginLeft: `${getMainContentMarginLeft(isNavMenuCollapsed)}px`,
+            transition: ANIMATIONS.CONTENT_TRANSITION,
+            width: `calc(100vw - ${getMainContentMarginLeft(isNavMenuCollapsed)}px)`,
+            boxSizing: 'border-box',
+          }}
+        >
           <ActionBar
             hasSelection={selectedFiles.length > 0}
             onNewContent={handleNewContent}
@@ -147,7 +163,12 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
         <div
           className={styles.workspaceContainer}
-          style={{ marginLeft: isNavMenuCollapsed ? '60px' : '300px' }}
+          style={{
+            marginLeft: `${getMainContentMarginLeft(isNavMenuCollapsed)}px`,
+            transition: ANIMATIONS.CONTENT_TRANSITION,
+            width: `calc(100vw - ${getMainContentMarginLeft(isNavMenuCollapsed)}px)`,
+            boxSizing: 'border-box',
+          }}
         >
           <main className={styles.mainContent}>
             {selectedItem ? (
