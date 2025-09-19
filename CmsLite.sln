@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CmsLite", "CmsLite\CmsLite.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CmsLiteTests", "CmsLiteTests\CmsLiteTests.csproj", "{DBF511C7-B8D9-41B9-BBF5-803BBE6F6636}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CmsLiteWebAppClient", "CmsLiteWebAppClient\CmsLiteWebAppClient.csproj", "{AD448AB9-93BB-4FB2-AA44-98799C61570E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CMSLiteWebAppClient", "CMSLiteWebAppClient\CMSLiteWebAppClient.csproj", "{E0A6AEBC-A243-4DE9-8D76-A3418B6EF94D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,10 @@ Global
 		{DBF511C7-B8D9-41B9-BBF5-803BBE6F6636}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DBF511C7-B8D9-41B9-BBF5-803BBE6F6636}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DBF511C7-B8D9-41B9-BBF5-803BBE6F6636}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AD448AB9-93BB-4FB2-AA44-98799C61570E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AD448AB9-93BB-4FB2-AA44-98799C61570E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AD448AB9-93BB-4FB2-AA44-98799C61570E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AD448AB9-93BB-4FB2-AA44-98799C61570E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0A6AEBC-A243-4DE9-8D76-A3418B6EF94D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0A6AEBC-A243-4DE9-8D76-A3418B6EF94D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0A6AEBC-A243-4DE9-8D76-A3418B6EF94D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0A6AEBC-A243-4DE9-8D76-A3418B6EF94D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
