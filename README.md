@@ -4,10 +4,10 @@ A lightweight CMS-style service for storing **tenant-scoped JSON content** in **
 
 Think of it as a dead-simple **content registry**:  
 - Each tenant has its own namespace (`/{tenant}/{resource}/v{n}.json`)  
-- All writes are **versioned** (append-only)  
-- Metadata is indexed locally in SQLite for fast listing  
-- Reads always serve JSON directly from blob storage  
-- Interaction is **API-only** (no UI yet)  
+- All writes are **versioned** (append-only)
+- Metadata is indexed locally in SQLite for fast listing
+- Reads always serve JSON directly from blob storage
+- **React frontend** with FluentUI design system
 - Authentication/authorization can be layered in later
 
 ---
@@ -21,9 +21,10 @@ To run the app and its dependencies locally using Docker Compose:
    docker compose -f docker/docker-compose.dev.yaml up --build
    ```
 
-2. **Access the API:**
+2. **Access the services:**
 
-   The API will be available at [http://localhost:8080](http://localhost:8080).
+   - **API:** [http://localhost:8080](http://localhost:8080)
+   - **Web App:** [http://localhost:9090](http://localhost:9090)
 
 3. **Health check:**
 

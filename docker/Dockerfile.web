@@ -1,14 +1,29 @@
-# build
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ./CmsLiteWebAppClient/ ./CmsLiteWebAppClient/
-WORKDIR /src/CmsLiteWebAppClient
-RUN dotnet publish -c Release -o /out
-
-# run
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+# build stage
+FROM node:18-alpine AS build
 WORKDIR /app
-COPY --from=build /out .
-ENV ASPNETCORE_URLS=http://+:9090
+
+# Copy package files
+COPY ./cms-lite-web-client/package*.json ./
+RUN npm ci
+
+# Copy source code and build
+COPY ./cms-lite-web-client/ ./
+RUN npm run build
+
+# production stage
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Create nginx config for React SPA
+RUN echo 'server { \
+    listen 9090; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
 EXPOSE 9090
-ENTRYPOINT ["dotnet", "CmsLiteWebAppClient.dll"]
+CMD ["nginx", "-g", "daemon off;"]

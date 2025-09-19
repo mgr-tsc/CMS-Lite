@@ -58,3 +58,8 @@ CLAUDE.md
 *.http
 .vscode/
 data/
+.idea/
+.claude
+cms-lite-web-client/node_modules/
+cms-lite-web-client/dist/
+cms-lite-web-client/build/
