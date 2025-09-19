@@ -74,7 +74,7 @@ export const CSS_VARIABLES = {
 // Animation constants
 export const ANIMATIONS = {
   NAV_MENU_TRANSITION: 'width 0.3s ease',
-  CONTENT_TRANSITION: 'margin-left 0.3s ease',
+  CONTENT_TRANSITION: 'all 0.3s ease',
 } as const
 
 // Breakpoints for responsive design

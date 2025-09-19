@@ -1,6 +1,6 @@
 import { makeStyles, tokens, Text } from '@fluentui/react-components'
 import { FileListView } from './FileListView'
-import { MAIN_CONTENT } from './layoutConstants'
+import { BREAKPOINTS, MAIN_CONTENT } from './layoutConstants'
 
 const useStyles = makeStyles({
   contentContainer: {
@@ -8,6 +8,12 @@ const useStyles = makeStyles({
     height: '100%',
     overflow: 'auto',
     backgroundColor: tokens.colorNeutralBackground1,
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      padding: tokens.spacingVerticalL,
+    },
+    [`@media (max-width: ${BREAKPOINTS.MOBILE}px)`]: {
+      padding: tokens.spacingVerticalM,
+    },
   },
   emptyState: {
     display: 'flex',

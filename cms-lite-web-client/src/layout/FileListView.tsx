@@ -14,6 +14,7 @@ import {
   DocumentRegular,
   FolderRegular,
 } from '@fluentui/react-icons'
+import { BREAKPOINTS } from './layoutConstants'
 
 const useStyles = makeStyles({
   container: {
@@ -22,16 +23,31 @@ const useStyles = makeStyles({
     padding: tokens.spacingVerticalL,
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     height: '100%',
-    overflow: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalL,
+    overflow: 'hidden',
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      padding: tokens.spacingVerticalM,
+      gap: tokens.spacingVerticalM,
+    },
   },
   header: {
     marginBottom: tokens.spacingVerticalL,
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
+    [`@media (max-width: ${BREAKPOINTS.MOBILE}px)`]: {
+      flexWrap: 'wrap',
+      rowGap: tokens.spacingVerticalS,
+    },
+  },
+  tableWrapper: {
+    overflowX: 'auto',
   },
   table: {
     width: '100%',
+    minWidth: '600px',
   },
   tableRow: {
     cursor: 'pointer',
@@ -51,6 +67,7 @@ const useStyles = makeStyles({
   fileName: {
     display: 'flex',
     alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
   },
 })
 
@@ -113,66 +130,68 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
       </div>
 
       {files.length > 0 ? (
-        <Table className={styles.table} aria-label="File list">
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>
-                <Checkbox
-                  checked={isAllSelected ? true : (isSomeSelected ? 'mixed' : false)}
-                  onChange={(_, data) => handleSelectAll(data.checked === true)}
-                />
-              </TableHeaderCell>
-              <TableHeaderCell>
-                <Text weight="semibold">File Name</Text>
-              </TableHeaderCell>
-              <TableHeaderCell>
-                <Text weight="semibold">Id</Text>
-              </TableHeaderCell>
-              <TableHeaderCell>
-                <Text weight="semibold">Latest Version</Text>
-              </TableHeaderCell>
-              <TableHeaderCell>
-                <Text weight="semibold">Size</Text>
-              </TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {files.map((file) => {
-              const isSelected = selectedFiles.includes(file.id)
-              return (
-                <TableRow
-                  key={file.id}
-                  className={`${styles.tableRow} ${isSelected ? styles.selectedRow : ''}`}
-                  onClick={() => handleRowClick(file.id)}
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleRowClick(file.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className={styles.fileName}>
-                      <DocumentRegular className={styles.fileIcon} />
-                      <Text>{file.name}</Text>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
-                      {file.id}
-                    </Text>
-                  </TableCell>
-                  <TableCell>
-                    <Text>{file.version}</Text>
-                  </TableCell>
-                  <TableCell>
-                    <Text>{file.size}</Text>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <div className={styles.tableWrapper}>
+          <Table className={styles.table} aria-label="File list">
+            <TableHeader>
+              <TableRow>
+                <TableHeaderCell>
+                  <Checkbox
+                    checked={isAllSelected ? true : (isSomeSelected ? 'mixed' : false)}
+                    onChange={(_, data) => handleSelectAll(data.checked === true)}
+                  />
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  <Text weight="semibold">File Name</Text>
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  <Text weight="semibold">Id</Text>
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  <Text weight="semibold">Latest Version</Text>
+                </TableHeaderCell>
+                <TableHeaderCell>
+                  <Text weight="semibold">Size</Text>
+                </TableHeaderCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {files.map((file) => {
+                const isSelected = selectedFiles.includes(file.id)
+                return (
+                  <TableRow
+                    key={file.id}
+                    className={`${styles.tableRow} ${isSelected ? styles.selectedRow : ''}`}
+                    onClick={() => handleRowClick(file.id)}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={() => handleRowClick(file.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className={styles.fileName}>
+                        <DocumentRegular className={styles.fileIcon} />
+                        <Text>{file.name}</Text>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
+                        {file.id}
+                      </Text>
+                    </TableCell>
+                    <TableCell>
+                      <Text>{file.version}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <Text>{file.size}</Text>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <div style={{
           display: 'flex',

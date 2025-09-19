@@ -1,6 +1,7 @@
 import { Text, Caption1, Button, makeStyles, tokens } from '@fluentui/react-components'
 import { SignOutRegular, NavigationRegular } from '@fluentui/react-icons'
 import { useAuth } from '../contexts/AuthContext'
+import { BREAKPOINTS } from './layoutConstants'
 
 const useStyles = makeStyles({
   header: {
@@ -11,20 +12,35 @@ const useStyles = makeStyles({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: tokens.spacingHorizontalL,
+    flexWrap: 'wrap',
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      alignItems: 'flex-start',
+    },
   },
   leftSection: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
+    flexWrap: 'wrap',
   },
   titleSection: {
     display: 'flex',
     flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
   },
   userSection: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      alignItems: 'flex-start',
+    },
+    [`@media (max-width: ${BREAKPOINTS.MOBILE}px)`]: {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+      width: '100%',
+    },
   },
   signOutButton: {
     color: tokens.colorNeutralForegroundOnBrand,
@@ -45,6 +61,12 @@ const useStyles = makeStyles({
     ':active': {
       backgroundColor: tokens.colorBrandBackgroundPressed,
     },
+  },
+  userDetails: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+    color: tokens.colorNeutralForegroundOnBrand,
   },
 })
 
@@ -75,12 +97,11 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
 
       {user && (
         <div className={styles.userSection}>
-          <div>
-            <Text size={300} style={{ color: tokens.colorNeutralForegroundOnBrand }}>
+          <div className={styles.userDetails}>
+            <Text size={300}>
               Welcome, {user.name}
             </Text>
-            <br />
-            <Caption1 style={{ color: tokens.colorNeutralForegroundOnBrand }}>
+            <Caption1>
               {user.email}
             </Caption1>
           </div>

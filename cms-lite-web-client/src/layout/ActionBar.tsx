@@ -7,13 +7,13 @@ import {
   DocumentRegular,
   ArrowSyncRegular,
 } from '@fluentui/react-icons'
-import { ACTION_BAR } from './layoutConstants'
+import { ACTION_BAR, BREAKPOINTS } from './layoutConstants'
 
 const useStyles = makeStyles({
   actionBar: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     gap: tokens.spacingHorizontalM,
     padding: tokens.spacingVerticalM,
     backgroundColor: tokens.colorNeutralBackground2,
@@ -22,10 +22,26 @@ const useStyles = makeStyles({
     width: '100%',
     zIndex: ACTION_BAR.Z_INDEX,
     boxSizing: 'border-box',
+    flexWrap: 'wrap',
+    rowGap: tokens.spacingVerticalS,
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      justifyContent: 'center',
+      gap: tokens.spacingHorizontalS,
+    },
   },
   buttonGroup: {
     display: 'flex',
     gap: tokens.spacingHorizontalS,
+    flexWrap: 'wrap',
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      width: '100%',
+      justifyContent: 'center',
+    },
+    [`@media (max-width: ${BREAKPOINTS.MOBILE}px)`]: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalS,
+    },
   },
 })
 

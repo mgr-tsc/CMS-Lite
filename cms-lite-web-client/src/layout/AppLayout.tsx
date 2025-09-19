@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { makeStyles } from '@fluentui/react-components'
 import { Header } from './Header'
 import { Footer } from './Footer'
@@ -8,20 +8,28 @@ import { NavMenu } from './NavMenu'
 import { ContentArea } from './ContentArea'
 import {
   ANIMATIONS,
-  getMainContentMarginLeft
+  BREAKPOINTS,
+  getNavMenuWidth,
 } from './layoutConstants'
 
 const useStyles = makeStyles({
   appContainer: {
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
-    overflow: 'hidden',
+    minHeight: '100vh',
+    backgroundColor: 'inherit',
   },
   mainContainer: {
-    display: 'flex',
+    display: 'grid',
     flex: 1,
+    minHeight: 0,
     position: 'relative',
+    width: '100%',
+    gridTemplateColumns: `${getNavMenuWidth(false)}px 1fr`,
+    transition: ANIMATIONS.CONTENT_TRANSITION,
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      gridTemplateColumns: '1fr',
+    },
   },
   contentWrapper: {
     flex: 1,
@@ -29,13 +37,31 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     transition: ANIMATIONS.CONTENT_TRANSITION,
     overflow: 'hidden',
+    minWidth: 0,
+    gridColumn: 2,
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      gridColumn: '1',
+    },
   },
   actionBarWrapper: {
     width: '100%',
+    zIndex: 1,
   },
   mainContent: {
     flex: 1,
     overflow: 'auto',
+    minHeight: 0,
+  },
+  overlayBackdrop: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    zIndex: 9,
+    opacity: 1,
+    transition: 'opacity 0.3s ease',
+    [`@media (min-width: ${BREAKPOINTS.TABLET + 1}px)`]: {
+      display: 'none',
+    },
   },
 })
 
@@ -63,12 +89,40 @@ interface AppLayoutProps {
 export const AppLayout = ({ children }: AppLayoutProps) => {
   const styles = useStyles()
   const [selectedItem, setSelectedItem] = useState<NavItem | null>(null)
-  const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(false)
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? BREAKPOINTS.DESKTOP : window.innerWidth,
+  )
+  const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < BREAKPOINTS.TABLET,
+  )
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth)
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isOverlayNav = viewportWidth < BREAKPOINTS.TABLET
+  const navWidth = isOverlayNav ? 0 : getNavMenuWidth(isNavMenuCollapsed)
+  const mainContainerStyle: CSSProperties = {
+    gridTemplateColumns: isOverlayNav ? '1fr' : `${navWidth}px 1fr`,
+  }
 
   const handleItemSelect = (item: NavItem) => {
     setSelectedItem(item)
     setSelectedFiles([]) // Clear file selection when switching directories
+    if (isOverlayNav) {
+      setIsNavMenuCollapsed(true)
+    }
   }
 
   const handleFileSelect = (fileIds: string[]) => {
@@ -107,7 +161,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   }
 
   const handleToggleNavMenu = () => {
-    setIsNavMenuCollapsed(!isNavMenuCollapsed)
+    setIsNavMenuCollapsed(prev => !prev)
   }
 
   return (
@@ -115,21 +169,25 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       {/* Header spans full width */}
       <Header onToggleNavMenu={handleToggleNavMenu} />
 
-      <div className={styles.mainContainer}>
+      {isOverlayNav && !isNavMenuCollapsed && (
+        <div
+          className={styles.overlayBackdrop}
+          onClick={() => setIsNavMenuCollapsed(true)}
+        />
+      )}
+
+      <div className={styles.mainContainer} style={mainContainerStyle}>
         {/* Fixed sidebar */}
         <NavMenu
           onItemSelect={handleItemSelect}
           selectedItemId={selectedItem?.id}
           isCollapsed={isNavMenuCollapsed}
+          isOverlay={isOverlayNav}
+          onDismissOverlay={() => setIsNavMenuCollapsed(true)}
         />
 
         {/* Main content area */}
-        <div
-          className={styles.contentWrapper}
-          style={{
-            marginLeft: `${getMainContentMarginLeft(isNavMenuCollapsed)}px`,
-          }}
-        >
+        <div className={styles.contentWrapper}>
           {/* ActionBar */}
           <div className={styles.actionBarWrapper}>
             <ActionBar
