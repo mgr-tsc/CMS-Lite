@@ -16,6 +16,9 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
+    maxWidth: '1280px',
+    margin: '0 auto',
+    width: '100%',
   },
 })
 
