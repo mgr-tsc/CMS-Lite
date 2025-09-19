@@ -114,12 +114,12 @@ export const SignIn = () => {
               </MessageBar>
             )}
 
-            <Field label="Email or Username">
+            <Field label="Email">
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email or username"
+                placeholder="Enter your email"
                 contentBefore={<PersonRegular />}
                 className={styles.input}
                 required
