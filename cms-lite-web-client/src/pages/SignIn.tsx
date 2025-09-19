@@ -15,6 +15,7 @@ import {
 } from '@fluentui/react-components'
 import { PersonRegular, LockClosedRegular } from '@fluentui/react-icons'
 import { useAuth } from '../contexts/AuthContext'
+import { BREAKPOINTS } from '../layout/layoutConstants'
 
 const useStyles = makeStyles({
   container: {
@@ -28,14 +29,17 @@ const useStyles = makeStyles({
   card: {
     width: '100%',
     maxWidth: '450px',
-    minWidth: '320px',
+    minWidth: '280px',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
     padding: tokens.spacingVerticalXL,
-    minWidth: '280px',
+    [`@media (max-width: ${BREAKPOINTS.MOBILE}px)`]: {
+      padding: tokens.spacingVerticalL,
+      gap: tokens.spacingVerticalM,
+    },
   },
   header: {
     textAlign: 'center',
@@ -56,16 +60,16 @@ const useStyles = makeStyles({
     textAlign: 'center',
   },
   input: {
-    width: '20vw',
-    display: 'flex',
-    margin: '0 auto',
+    width: '100%',
   },
   btn: {
-    width: '10vw',
-    display: 'flex',
-    margin: '0 auto',
+    alignSelf: 'center',
     marginTop: tokens.spacingVerticalM,
-  }
+    minWidth: '160px',
+    [`@media (max-width: ${BREAKPOINTS.MOBILE}px)`]: {
+      width: '100%',
+    },
+  },
 })
 
 export const SignIn = () => {
@@ -110,19 +114,19 @@ export const SignIn = () => {
               </MessageBar>
             )}
 
-            <Field label="Email or Username" style={{ textAlign: "center" }}>
+            <Field label="Email">
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email or username"
+                placeholder="Enter your email"
                 contentBefore={<PersonRegular />}
                 className={styles.input}
                 required
               />
             </Field>
 
-            <Field label="Password" style={{ textAlign: "center", marginTop: '1vh'}}>
+            <Field label="Password">
               <Input
                 type="password"
                 value={password}

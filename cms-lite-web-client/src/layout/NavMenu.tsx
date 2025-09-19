@@ -10,26 +10,58 @@ import {
   ChevronRightRegular,
   ChevronDownRegular,
 } from '@fluentui/react-icons'
-import { NAV_MENU, ANIMATIONS } from './layoutConstants'
+import { NAV_MENU, ANIMATIONS, BREAKPOINTS, HEADER } from './layoutConstants'
 
 const useStyles = makeStyles({
   navMenu: {
-    position: 'fixed',
-    top: `${NAV_MENU.TOP_OFFSET}px`,
-    left: '0',
-    bottom: `${NAV_MENU.BOTTOM_OFFSET}px`,
+    position: 'sticky',
+    top: 0,
     backgroundColor: tokens.colorNeutralBackground1,
     borderRight: `1px solid ${tokens.colorNeutralStroke1}`,
     padding: tokens.spacingVerticalM,
     overflowY: 'auto',
     transition: ANIMATIONS.NAV_MENU_TRANSITION,
-    zIndex: NAV_MENU.Z_INDEX,
+    height: '100%',
+    maxHeight: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    boxSizing: 'border-box',
+    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+      position: 'fixed',
+      top: `${HEADER.HEIGHT}px`,
+      bottom: 0,
+      height: `calc(100vh - ${HEADER.HEIGHT}px)`,
+      maxHeight: 'none',
+      borderRight: 'none',
+      boxShadow: '0 12px 28px rgba(0, 0, 0, 0.2)',
+      zIndex: NAV_MENU.Z_INDEX,
+    },
   },
-  expanded: {
+  inlineExpanded: {
     width: `${NAV_MENU.EXPANDED_WIDTH}px`,
   },
-  collapsed: {
+  inlineCollapsed: {
     width: `${NAV_MENU.COLLAPSED_WIDTH}px`,
+  },
+  overlayBase: {
+    width: 'min(85vw, 320px)',
+    transform: 'translateX(0)',
+    transition: 'transform 0.3s ease, opacity 0.3s ease',
+    [`@media (max-width: ${BREAKPOINTS.MOBILE}px)`]: {
+      width: 'min(90vw, 320px)',
+    },
+  },
+  overlayHidden: {
+    transform: 'translateX(-100%)',
+    pointerEvents: 'none',
+    opacity: 0,
+    visibility: 'hidden',
+  },
+  overlayVisible: {
+    transform: 'translateX(0)',
+    pointerEvents: 'auto',
+    opacity: 1,
+    visibility: 'visible',
   },
   header: {
     padding: tokens.spacingVerticalS,
@@ -96,6 +128,8 @@ interface NavMenuProps {
   onItemSelect?: (item: NavItem) => void
   selectedItemId?: string
   isCollapsed?: boolean
+  isOverlay?: boolean
+  onDismissOverlay?: () => void
 }
 
 // Mock data structure for the CMS content tree (directories only in nav)
@@ -207,7 +241,13 @@ export const findDirectoryById = (id: string): NavItem | null => {
   return findInTree(mockNavData)
 }
 
-export const NavMenu = ({ onItemSelect, selectedItemId, isCollapsed = false }: NavMenuProps) => {
+export const NavMenu = ({
+  onItemSelect,
+  selectedItemId,
+  isCollapsed = false,
+  isOverlay = false,
+  onDismissOverlay,
+}: NavMenuProps) => {
   const styles = useStyles()
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['pages', 'blog']))
 
@@ -225,6 +265,10 @@ export const NavMenu = ({ onItemSelect, selectedItemId, isCollapsed = false }: N
 
     // Also notify parent about folder selection to show files in main view
     onItemSelect?.(item)
+
+    if (isOverlay) {
+      onDismissOverlay?.()
+    }
   }
 
   const renderTreeItem = (item: NavItem, level: number = 0) => {
@@ -262,8 +306,16 @@ export const NavMenu = ({ onItemSelect, selectedItemId, isCollapsed = false }: N
     )
   }
 
+  const navClassName = [
+    styles.navMenu,
+    isOverlay ? styles.overlayBase : (isCollapsed ? styles.inlineCollapsed : styles.inlineExpanded),
+    isOverlay ? (isCollapsed ? styles.overlayHidden : styles.overlayVisible) : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <div className={`${styles.navMenu} ${isCollapsed ? styles.collapsed : styles.expanded}`}>
+    <nav className={navClassName} aria-label="Content explorer" aria-hidden={isOverlay && isCollapsed}>
       {!isCollapsed && (
         <div className={styles.header}>
           <Text weight="semibold" size={400}>
@@ -275,6 +327,6 @@ export const NavMenu = ({ onItemSelect, selectedItemId, isCollapsed = false }: N
       <div className={styles.treeContainer}>
         {mockNavData.map(item => renderTreeItem(item))}
       </div>
-    </div>
+    </nav>
   )
 }
