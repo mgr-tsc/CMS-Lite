@@ -1,5 +1,5 @@
 import { Text, Caption1, Button, makeStyles, tokens } from '@fluentui/react-components'
-import { SignOutRegular } from '@fluentui/react-icons'
+import { SignOutRegular, NavigationRegular } from '@fluentui/react-icons'
 import { useAuth } from '../contexts/AuthContext'
 
 const useStyles = makeStyles({
@@ -12,6 +12,11 @@ const useStyles = makeStyles({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  leftSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalM,
+  },
   titleSection: {
     display: 'flex',
     flexDirection: 'column',
@@ -23,17 +28,29 @@ const useStyles = makeStyles({
   },
 })
 
-export const Header = () => {
+interface HeaderProps {
+  onToggleNavMenu?: () => void
+}
+
+export const Header = ({ onToggleNavMenu }: HeaderProps) => {
   const styles = useStyles()
   const { user, logout } = useAuth()
 
   return (
     <header className={styles.header}>
-      <div className={styles.titleSection}>
-        <Text as="h1" size={800} weight="bold">
-          CMS Lite - Content Management System
-        </Text>
-        <Caption1>Manage your dynamic content with ease</Caption1>
+      <div className={styles.leftSection}>
+        <Button
+          icon={<NavigationRegular />}
+          appearance="subtle"
+          onClick={onToggleNavMenu}
+          style={{ color: tokens.colorNeutralForegroundOnBrand }}
+        />
+        <div className={styles.titleSection}>
+          <Text as="h1" size={800} weight="bold">
+            CMS Lite - Content Management System
+          </Text>
+          <Caption1>Manage your dynamic content with ease</Caption1>
+        </div>
       </div>
 
       {user && (

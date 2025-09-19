@@ -1,4 +1,6 @@
 export { Header } from './Header'
 export { NavMenu } from './NavMenu'
 export { Footer } from './Footer'
+export { ActionBar } from './ActionBar'
+export { FileListView } from './FileListView'
 export { MainLayout } from './MainLayout'

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import {
   Card,
-  CardHeader,
   CardPreview,
   Text,
   Input,
