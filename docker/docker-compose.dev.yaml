@@ -26,10 +26,6 @@ services:
     build:
       context: ..
       dockerfile: ./docker/Dockerfile.web
-    environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      ASPNETCORE_URLS: "http://+:9090"
-      ApiBaseUrl: "http://api:8080"
     ports: ["9090:9090"]
     depends_on:
       - api
