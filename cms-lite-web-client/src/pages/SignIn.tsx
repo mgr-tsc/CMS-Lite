@@ -23,15 +23,19 @@ const useStyles = makeStyles({
     justifyContent: 'center',
     minHeight: '100vh',
     backgroundColor: tokens.colorNeutralBackground1,
+    padding: tokens.spacingHorizontalM,
   },
   card: {
-    maxWidth: '600px',
+    width: '100%',
+    maxWidth: '450px',
+    minWidth: '320px',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalL,
     padding: tokens.spacingVerticalXL,
+    minWidth: '280px',
   },
   header: {
     textAlign: 'center',
@@ -46,7 +50,22 @@ const useStyles = makeStyles({
     padding: tokens.spacingVerticalM,
     borderRadius: tokens.borderRadiusLarge,
     marginTop: tokens.spacingVerticalM,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+    textAlign: 'center',
   },
+  input: {
+    width: '20vw',
+    display: 'flex',
+    margin: '0 auto',
+  },
+  btn: {
+    width: '10vw',
+    display: 'flex',
+    margin: '0 auto',
+    marginTop: tokens.spacingVerticalM,
+  }
 })
 
 export const SignIn = () => {
@@ -91,34 +110,36 @@ export const SignIn = () => {
               </MessageBar>
             )}
 
-            <Field label="Email or Username" style={{textAlign: 'center'}}>
+            <Field label="Email or Username" style={{ textAlign: "center" }}>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email or username"
                 contentBefore={<PersonRegular />}
+                className={styles.input}
                 required
               />
             </Field>
-            <br />
-            <Field label="Password" style={{textAlign: 'center'}}>
+
+            <Field label="Password" style={{ textAlign: "center", marginTop: '1vh'}}>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
+                className={styles.input}
                 contentBefore={<LockClosedRegular />}
                 required
               />
             </Field>
-            
-            <br />
+
             <Button
               type="submit"
               appearance="primary"
               disabled={isLoading}
-              style={{ width: '100%' }}
+              className={styles.btn}
+              size="medium"
             >
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>

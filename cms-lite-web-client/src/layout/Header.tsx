@@ -26,6 +26,26 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
   },
+  signOutButton: {
+    color: tokens.colorNeutralForegroundOnBrand,
+    ':hover': {
+      backgroundColor: tokens.colorBrandBackgroundHover,
+      color: tokens.colorNeutralForegroundOnBrand,
+    },
+    ':active': {
+      backgroundColor: tokens.colorBrandBackgroundPressed,
+    },
+  },
+  navToggleButton: {
+    color: tokens.colorNeutralForegroundOnBrand,
+    ':hover': {
+      backgroundColor: tokens.colorBrandBackgroundHover,
+      color: tokens.colorNeutralForegroundOnBrand,
+    },
+    ':active': {
+      backgroundColor: tokens.colorBrandBackgroundPressed,
+    },
+  },
 })
 
 interface HeaderProps {
@@ -43,7 +63,7 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
           icon={<NavigationRegular />}
           appearance="subtle"
           onClick={onToggleNavMenu}
-          style={{ color: tokens.colorNeutralForegroundOnBrand }}
+          className={styles.navToggleButton}
         />
         <div className={styles.titleSection}>
           <Text as="h1" size={800} weight="bold">
@@ -68,7 +88,7 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
             icon={<SignOutRegular />}
             appearance="subtle"
             onClick={logout}
-            style={{ color: tokens.colorNeutralForegroundOnBrand }}
+            className={styles.signOutButton}
           >
             Sign Out
           </Button>
