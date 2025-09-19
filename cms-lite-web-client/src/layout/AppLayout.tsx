@@ -186,6 +186,8 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         <div
           className={styles.overlayBackdrop}
           onClick={() => setIsNavMenuCollapsed(true)}
+          role="presentation"
+          aria-hidden="true"
         />
       )}
 
