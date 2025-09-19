@@ -102,13 +102,26 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       return undefined
     }
 
+    let rAFId: number | null = null
+
     const handleResize = () => {
-      setViewportWidth(window.innerWidth)
+      if (rAFId !== null) {
+        return
+      }
+      rAFId = window.requestAnimationFrame(() => {
+        setViewportWidth(window.innerWidth)
+        rAFId = null
+      })
     }
 
     handleResize()
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (rAFId !== null) {
+        window.cancelAnimationFrame(rAFId)
+      }
+    }
   }, [])
 
   const isOverlayNav = viewportWidth < BREAKPOINTS.TABLET
