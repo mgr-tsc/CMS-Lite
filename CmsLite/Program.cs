@@ -5,7 +5,6 @@ using CmsLite.Database;
 using CmsLite.Authentication;
 using CmsLite.Content;
 using CmsLite.Helpers.RequestMappers;
-using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 

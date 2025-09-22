@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CmsLite.Database.Repositories;
+using CmsLite.Helpers;
 
 namespace CmsLiteTests.Fakes;
 
@@ -10,6 +11,8 @@ public class InMemoryBlobRepo : IBlobRepo
     public Task<(string ETag, long Size)> UploadJsonAsync(string key, byte[] bytes)
     {
         var etag = $"etag-{Guid.NewGuid():N}";
+        if (Utilities.IsValidJson(bytes) == false)
+            throw new ArgumentException("The provided bytes are not valid JSON.", nameof(bytes));
         _store[key] = (bytes, etag);
         return Task.FromResult((etag, bytes.LongLength));
     }

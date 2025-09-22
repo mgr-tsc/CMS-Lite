@@ -21,79 +21,84 @@ public static class ContentEndpoints
             IBlobRepo blobs) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
-
             if (!req.ContentType?.StartsWith("application/json") ?? true)
+            {
                 return Results.BadRequest("Only application/json is allowed.");
-
+            }
             using var ms = new MemoryStream();
             await req.Body.CopyToAsync(ms);
             var bytes = ms.ToArray();
             if (bytes.Length == 0) return Results.BadRequest("Empty body.");
-
             // Calculate content integrity hash
             string sha256;
             using (var sha = SHA256.Create())
+            {
                 sha256 = Convert.ToHexString(sha.ComputeHash(bytes));
-
+            }
             // Get current item for optimistic concurrency
-            var item = await db.ContentItemsTable
-                .SingleOrDefaultAsync(x => x.Tenant.Name == tenant && x.Resource == resource);
-
+            var item = await db.ContentItemsTable.SingleOrDefaultAsync(x => x.Tenant.Name == tenant && x.Resource == resource);
             // Handle optimistic concurrency control
             var ifMatch = req.Headers["If-Match"].FirstOrDefault();
             if (!string.IsNullOrEmpty(ifMatch) && item != null && item.ETag != ifMatch)
+            {
                 return Results.StatusCode(StatusCodes.Status412PreconditionFailed);
-
+            }
+            // Determine next version and blob key
             var nextVersion = (item?.LatestVersion ?? 0) + 1;
             var blobKey = $"{tenant}/{resource}/v{nextVersion}.json";
-
             // Upload content to blob storage
-            var (etag, size) = await blobs.UploadJsonAsync(blobKey, bytes);
-
-            // Update or create content item metadata
-            if (item == null)
+            try
             {
-                item = new DbSet.ContentItem
+                var (etag, size) = await blobs.UploadJsonAsync(blobKey, bytes);
+                // Update or create content item metadata
+                if (item == null)
+                {
+                    item = new DbSet.ContentItem
+                    {
+                        TenantId = tenant,
+                        Resource = resource,
+                        LatestVersion = nextVersion,
+                        ContentType = "application/json",
+                        ByteSize = size,
+                        Sha256 = sha256,
+                        ETag = etag,
+                        CreatedAtUtc = DateTime.UtcNow,
+                        UpdatedAtUtc = DateTime.UtcNow,
+                        IsDeleted = 0
+                    };
+                    db.ContentItemsTable.Add(item);
+                }
+                else
+                {
+                    item.LatestVersion = nextVersion;
+                    item.ByteSize = size;
+                    item.Sha256 = sha256;
+                    item.ETag = etag;
+                    item.UpdatedAtUtc = DateTime.UtcNow;
+                    item.IsDeleted = 0;
+                }
+                // Create version history record
+                db.ContentVersionsTable.Add(new DbSet.ContentVersion
                 {
                     TenantId = tenant,
                     Resource = resource,
-                    LatestVersion = nextVersion,
-                    ContentType = "application/json",
+                    Version = nextVersion,
                     ByteSize = size,
                     Sha256 = sha256,
                     ETag = etag,
-                    CreatedAtUtc = DateTime.UtcNow,
-                    UpdatedAtUtc = DateTime.UtcNow,
-                    IsDeleted = 0
-                };
-                db.ContentItemsTable.Add(item);
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+                await db.SaveChangesAsync();
+                return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}", new { tenant, resource, version = nextVersion, etag, sha256, size });
             }
-            else
+            catch (ArgumentException ex)
             {
-                item.LatestVersion = nextVersion;
-                item.ByteSize = size;
-                item.Sha256 = sha256;
-                item.ETag = etag;
-                item.UpdatedAtUtc = DateTime.UtcNow;
-                item.IsDeleted = 0;
+                return Results.BadRequest(ex.Message);
             }
-
-            // Create version history record
-            db.ContentVersionsTable.Add(new DbSet.ContentVersion
+            catch (Exception)
             {
-                TenantId = tenant,
-                Resource = resource,
-                Version = nextVersion,
-                ByteSize = size,
-                Sha256 = sha256,
-                ETag = etag,
-                CreatedAtUtc = DateTime.UtcNow
-            });
-
-            await db.SaveChangesAsync();
-
-            return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}",
-                new { tenant, resource, version = nextVersion, etag, sha256, size });
+                return Results.StatusCode(StatusCodes.Status500InternalServerError);
+            }
         }).WithName("CreateOrUpdateContent")
         .RequireAuthorization()
         .WithSummary("Create or update content")

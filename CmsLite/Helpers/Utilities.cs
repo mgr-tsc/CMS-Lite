@@ -1,5 +1,3 @@
-using System;
-
 namespace CmsLite.Helpers;
 
 public class Utilities
@@ -29,4 +27,34 @@ public class Utilities
         return hashedInput == hashedPassword;
     }
 
+    public static bool IsValidJson(byte[] data)
+    {
+        try
+        {
+            System.Text.Json.JsonDocument.Parse(data);
+            return true;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
+
+    public static bool IsValidJsonWithComments(byte[] data)
+    {
+        var options = new System.Text.Json.JsonDocumentOptions
+        {
+            AllowTrailingCommas = true,
+            CommentHandling = System.Text.Json.JsonCommentHandling.Skip
+        };
+        try
+        {
+            System.Text.Json.JsonDocument.Parse(data, options);
+            return true;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
 }
