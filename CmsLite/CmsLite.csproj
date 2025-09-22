@@ -17,6 +17,9 @@
     <PrivateAssets>all</PrivateAssets>
     <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
   </PackageReference>
+  
+  <!-- ASP.NET Core Authentication with JWT Bearer -->
+  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
 
   <!-- Configuration / logging helpers (optional, but nice to have) -->
   <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />

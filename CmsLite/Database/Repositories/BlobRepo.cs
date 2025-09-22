@@ -21,6 +21,8 @@ public class BlobRepo : IBlobRepo
     {
         var blob = _container.GetBlobClient(key);
         using var ms = new MemoryStream(bytes);
+        if (Helpers.Utilities.IsValidJson(bytes) == false)
+            throw new ArgumentException("The provided bytes are not valid JSON.", nameof(bytes));
         var resp = await blob.UploadAsync(ms, overwrite: true);
         var props = await blob.GetPropertiesAsync();
         return (props.Value.ETag.ToString(), props.Value.ContentLength);
