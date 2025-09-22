@@ -6,28 +6,30 @@ namespace CmsLite.Authentication;
 public static class AuthenticationServiceRegistration
 {
     /// <summary>
-    /// Registers all authentication-related services in the DI container
+    /// Register all the services and repositories required
     /// </summary>
     public static void AddCmsLiteAuthentication(this WebApplicationBuilder builder)
     {
         var configuration = builder.Configuration;
-        // Add authentication services
         builder.AddAuthenticationServices(configuration);
+        builder.Services.AddAuthorization();
         // Register authentication service and repositories
         builder.Services.AddScoped<ICmsLiteAuthenticationService, CmsLiteAuthenticationService>();
         builder.Services.AddScoped<IUserRepo, UserRepo>();
         builder.Services.AddScoped<IUserSessionRepo, UserSessionRepo>();
+        builder.Services.AddScoped<ITenantRepo, TenantRepo>();
+        // Add logging
         builder.Services.AddLogging();
     }
 
     /// <summary>
-    /// Configures the authentication middleware pipeline and endpoints
+    /// Configures the authentication middleware pipeline
     /// </summary>
     public static void UseCmsLiteAuthentication(this WebApplication app)
     {
         // Add authentication middleware (required for JWT validation)
         app.UseAuthentication();
-        // Map authentication endpoints
-        app.MapAuthenticationEndpoints();
+        // Add authorization middleware (required to enforce [Authorize] attributes)
+        app.UseAuthorization();
     }
 }

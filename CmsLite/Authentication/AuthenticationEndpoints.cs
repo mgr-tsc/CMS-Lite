@@ -23,32 +23,30 @@ public static class AuthenticationEndpoints
                 {
                     return Results.BadRequest("Email and password are required");
                 }
-
-                // Attempt sign-in
+                // Attempt sign-in (validates credentials only, no session created yet)
                 var signInResult = await authService.SignInAsync(request.Email, request.Password);
-                if (!signInResult)
+                if (!signInResult.IsSuccess)
                 {
                     return Results.Unauthorized();
                 }
-
-                // Get user details for response
-                var user = await userRepo.GetUserByEmailAsync(request.Email);
-                if (user == null)
+                var user = signInResult.User!;
+                // Check if user already has an active session
+                var existingSession = await authService.GetActiveSessionAsync(user.Id);
+                DbSet.UserSession session;
+                if (existingSession != null)
                 {
-                    return Results.Problem("User not found after successful sign-in");
+                    // User is already signed in, refresh the existing session
+                    session = await authService.RefreshExistingSessionAsync(existingSession);
                 }
-
-                // Generate token
-                var token = await authService.GenerateTokenAsync(user.Id, user.TenantId);
-                if (string.IsNullOrEmpty(token))
+                else
                 {
-                    return Results.Problem("Failed to generate authentication token");
+                    // Create new session
+                    session = await authService.CreateUserSessionAsync(user);
                 }
-
                 var response = new LoginResponse
                 {
-                    Token = token,
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                    Token = session.JwtToken,
+                    ExpiresAt = session.ExpiresAtUtc,
                     User = new UserInfo
                     {
                         Id = user.Id,
@@ -58,12 +56,9 @@ public static class AuthenticationEndpoints
                         Tenant = new TenantInfo
                         {
                             Id = user.TenantId,
-                            Name = user.TenantId, // For now, using TenantId as name
-                            DisplayName = user.TenantId // TODO: Get actual tenant details
                         }
                     }
                 };
-
                 return Results.Ok(response);
             }
             catch (Exception ex)
@@ -180,7 +175,8 @@ public static class AuthenticationEndpoints
                 Console.WriteLine($"Token refresh error: {ex.Message}");
                 return Results.Unauthorized();
             }
-        }).WithName("RefreshToken")
+        }).RequireAuthorization()
+        .WithName("RefreshToken")
         .WithSummary("Refresh authentication token")
         .WithDescription("Generate a new token from an existing valid token");
     }

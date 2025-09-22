@@ -16,6 +16,14 @@ services:
       Database__Path: "/data/cms.sqlite"
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
+      # JWT Configuration for Development
+      Jwt__Key: "development-jwt-secret-key-for-cmslite-container-32-chars-minimum"
+      Jwt__Issuer: "CmsLiteDev"
+      Jwt__Audience: "CmsLiteDevUsers"
+      Jwt__ValidateIssuer: "false"
+      Jwt__ValidateAudience: "false"
+      Jwt__ValidateLifetime: "true"
+      Jwt__ValidateIssuerSigningKey: "true"
     ports: ["8080:8080"]
     depends_on:
       - azurite

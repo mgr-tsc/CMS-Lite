@@ -34,9 +34,9 @@ public class CmsLiteDbContext : DbContext, ICmsLiteDbContext
             entity.HasIndex(e => e.Id).IsUnique();
             entity.Property(e => e.LastName).HasMaxLength(100);
             entity.Property(e => e.FirstName).HasMaxLength(100);
-            entity.HasOne<DbSet.Tenant>()
+            entity.HasOne(u => u.Tenant)
                 .WithMany(t => t.Users)
-                .HasForeignKey(e => e.TenantId)
+                .HasForeignKey(u => u.TenantId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
         modelBuilder.Entity<DbSet.UserSession>(entity =>
@@ -52,16 +52,9 @@ public class CmsLiteDbContext : DbContext, ICmsLiteDbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Id).IsUnique();
+            entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Description).HasMaxLength(500);
-            entity.HasMany<DbSet.User>()
-                .WithOne()
-                .HasForeignKey(u => u.TenantId)
-                .OnDelete(DeleteBehavior.NoAction);
-            entity.HasMany(t => t.ContentItems)
-                .WithOne(ci => ci.Tenant)
-                .HasForeignKey(ci => ci.TenantId)
-                .OnDelete(DeleteBehavior.NoAction);
         });
         modelBuilder.Entity<DbSet.ContentItem>(entity =>
         {

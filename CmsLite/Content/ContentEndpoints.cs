@@ -37,7 +37,7 @@ public static class ContentEndpoints
 
             // Get current item for optimistic concurrency
             var item = await db.ContentItemsTable
-                .SingleOrDefaultAsync(x => x.TenantId == tenant && x.Resource == resource);
+                .SingleOrDefaultAsync(x => x.Tenant.Name == tenant && x.Resource == resource);
 
             // Handle optimistic concurrency control
             var ifMatch = req.Headers["If-Match"].FirstOrDefault();
@@ -95,6 +95,7 @@ public static class ContentEndpoints
             return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}",
                 new { tenant, resource, version = nextVersion, etag, sha256, size });
         }).WithName("CreateOrUpdateContent")
+        .RequireAuthorization()
         .WithSummary("Create or update content")
         .WithDescription("Create new content or update existing content with versioning");
 
@@ -122,7 +123,8 @@ public static class ContentEndpoints
             res.Headers.ETag = blob.Value.ETag;
             await res.Body.WriteAsync(blob.Value.Bytes);
             return Results.Empty;
-        }).WithName("GetContent")
+        }).RequireAuthorization()
+        .WithName("GetContent")
         .WithSummary("Retrieve content")
         .WithDescription("Get content by tenant and resource, optionally specifying version");
 
@@ -150,7 +152,9 @@ public static class ContentEndpoints
             res.Headers.ETag = head.Value.ETag;
             res.ContentLength = head.Value.Size;
             return Results.Empty;
-        }).WithName("GetContentMetadata")
+        })
+        .RequireAuthorization()
+        .WithName("GetContentMetadata")
         .WithSummary("Get content metadata")
         .WithDescription("Get content metadata without downloading the content body");
 
@@ -200,7 +204,9 @@ public static class ContentEndpoints
             });
 
             return Results.Ok(new { items, nextCursor = next });
-        }).WithName("ListTenantResources")
+        }).RequireAuthorization()
+        .RequireAuthorization()
+        .WithName("ListTenantResources")
         .WithSummary("List tenant resources")
         .WithDescription("List all resources for a tenant with optional filtering and pagination");
 
@@ -221,7 +227,8 @@ public static class ContentEndpoints
             await db.SaveChangesAsync();
 
             return Results.NoContent();
-        }).WithName("DeleteContent")
+        }).RequireAuthorization()
+        .WithName("DeleteContent")
         .WithSummary("Delete content")
         .WithDescription("Soft delete content (marks as deleted but preserves data)");
 
@@ -248,7 +255,8 @@ public static class ContentEndpoints
 
             if (versions.Count == 0) return Results.NotFound();
             return Results.Ok(versions);
-        }).WithName("GetContentVersions")
+        }).RequireAuthorization()
+        .WithName("GetContentVersions")
         .WithSummary("List content versions")
         .WithDescription("Get all versions of a specific content resource");
     }

@@ -97,6 +97,10 @@ curl -X POST http://localhost:8080/auth/refresh \
 - **GET /auth/me** → Get current user information
 - **POST /auth/refresh** → Refresh authentication token (with rotation)
 
+### 👥 User & Tenant Management (Public)
+- **POST /create-tenant** → Create new tenant with owner user
+- **POST /attach-user** → Attach user to existing tenant
+
 ### 📁 Content Management (Authenticated)
 - **PUT /v1/{tenant}/{resource}** → Create/update JSON content (auto-versioned)
 - **GET /v1/{tenant}/{resource}** → Retrieve content (latest or specific version)

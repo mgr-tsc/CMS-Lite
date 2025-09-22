@@ -20,12 +20,7 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
-    private string? GenerateToken(string userId, string tenantId, CancellationToken cancellationToken = default)
-    {
-        return GenerateTokenWithSessionId(userId, tenantId, Guid.NewGuid().ToString());
-    }
-
-    private string? GenerateTokenWithSessionId(string userId, string tenantId, string sessionId)
+    private string? GenerateToken(string userId, string tenantId, string? sessionId = null)
     {
         var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
         var key = AuthenticationRegister.GetJwtKey(configuration);
@@ -33,6 +28,7 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
             throw new InvalidOperationException("JWT key is not configured.");
 
         var jwtSection = configuration.GetSection("Jwt");
+        var actualSessionId = sessionId ?? Guid.NewGuid().ToString();
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
@@ -40,7 +36,7 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
             {
                 new System.Security.Claims.Claim(ClaimTypes.PrimarySid, userId),
                 new System.Security.Claims.Claim(ClaimTypes.GroupSid, tenantId),
-                new System.Security.Claims.Claim(ClaimTypes.Sid, sessionId),
+                new System.Security.Claims.Claim(ClaimTypes.Sid, actualSessionId),
                 new System.Security.Claims.Claim("LastLoginTime", DateTime.UtcNow.ToString())
             }),
             Expires = DateTime.UtcNow.AddMinutes(30),
@@ -50,11 +46,6 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
         };
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
-    }
-
-    Task<string?> ICmsLiteAuthenticationService.GenerateTokenAsync(string userId, string tenantId, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(GenerateToken(userId, tenantId));
     }
 
     public async Task<RefreshTokenResult?> RefreshTokenAsync(string token, CancellationToken cancellationToken = default)
@@ -103,7 +94,7 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
 
             // Generate new token with new session ID for token rotation
             var newSessionId = Guid.NewGuid().ToString();
-            var newToken = GenerateTokenWithSessionId(userId, tenantId, newSessionId);
+            var newToken = GenerateToken(userId, tenantId, newSessionId);
 
             if (string.IsNullOrEmpty(newToken))
             {
@@ -132,52 +123,72 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
         }
     }
 
-    public async Task<bool> SignInAsync(string email, string password, CancellationToken cancellationToken = default)
+    public async Task<SignInResult> SignInAsync(string email, string password, CancellationToken cancellationToken = default)
     {
         try
         {
             var user = await userRepo.GetUserByEmailAsync(email);
             if (user == null)
-                return false;
-            if (await CheckIfAlreadySignedInAsync(user.Id))
-                    return false;
-            var passwordHashed = user?.PasswordHash;
+                return SignInResult.Failure("Invalid email or password");
+                
+            var passwordHashed = user.PasswordHash;
             if (passwordHashed == null)
-                return false;
+                return SignInResult.Failure("Invalid user account configuration");
+                
             if (!Helpers.Utilities.VerifyPassword(password, passwordHashed))
-                return false;
-            var jwtToken = GenerateToken(user.Id, user.TenantId, cancellationToken);
-            if (jwtToken == null)
-                return false;
-            var session = new DbSet.UserSession
-            {
-                Id = Guid.NewGuid().ToString(),
-                User = user,
-                UserId = user.Id,
-                JwtToken = jwtToken,
-                CreatedAtUtc = DateTime.UtcNow,
-                ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
-                IsRevoked = false
-            };
-            await userSessionRepo.CreateSessionAsync(session);
-            return true;
+                return SignInResult.Failure("Invalid email or password");
+
+            return SignInResult.Success(user);
         }
         catch (Exception ex)
         {
             //TODO: Implement logging
             Console.WriteLine($"Error during sign-in: {ex.Message}");
-            return false;
+            return SignInResult.Failure("An error occurred during sign-in");
         }
     }
 
-    public async Task<bool> CheckIfAlreadySignedInAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<DbSet.UserSession> CreateUserSessionAsync(DbSet.User user, CancellationToken cancellationToken = default)
+    {
+        var jwtToken = GenerateToken(user.Id, user.TenantId) ?? throw new InvalidOperationException("Failed to generate JWT token");
+        var session = new DbSet.UserSession
+        {
+            Id = Guid.NewGuid().ToString(),
+            User = user,
+            UserId = user.Id,
+            JwtToken = jwtToken,
+            CreatedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
+            IsRevoked = false
+        };
+        await userSessionRepo.CreateSessionAsync(session, cancellationToken);
+        return session;
+    }
+
+    public async Task<DbSet.UserSession?> GetActiveSessionAsync(string userId, CancellationToken cancellationToken = default)
     {
         var existingSession = await userSessionRepo.GetActiveSessionByUserIdAsync(userId, cancellationToken);
-        if (existingSession != null && existingSession.ExpiresAtUtc > DateTime.UtcNow)
+        if (existingSession != null && existingSession.ExpiresAtUtc > DateTime.UtcNow && !existingSession.IsRevoked)
         {
-            return true;
+            return existingSession;
         }
-        return false;
+        return null;
+    }
+
+    public async Task<DbSet.UserSession> RefreshExistingSessionAsync(DbSet.UserSession session, CancellationToken cancellationToken = default)
+    {
+        // Extend the session expiration time
+        session.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30);
+        
+        // Optionally generate a new token for enhanced security
+        var newToken = GenerateToken(session.UserId, session.User.TenantId);
+        if (newToken != null)
+        {
+            session.JwtToken = newToken;
+        }
+        
+        await userSessionRepo.UpdateSessionAsync(session, cancellationToken);
+        return session;
     }
 
     public Task SignOutAsync(string userId, string sessionId, CancellationToken cancellationToken = default)
