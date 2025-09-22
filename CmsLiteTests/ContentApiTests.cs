@@ -16,7 +16,7 @@ public class ContentApiTests
     [Fact]
     public async Task Put_CreatesNewItemAndRetrievable()
     {
-        using var factory = new CmsLiteTestFactory();
+        using var factory = new CmsLiteTestFactoryNoAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
@@ -50,8 +50,8 @@ public class ContentApiTests
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CmsLiteDbContext>();
-        var item = await db.ContentItems.SingleAsync();
-        Assert.Equal("acme", item.Tenant);
+        var item = await db.ContentItemsTable.SingleAsync();
+        Assert.Equal("acme", item.TenantId);
         Assert.Equal("home", item.Resource);
         Assert.Equal(1, item.LatestVersion);
     }
@@ -59,7 +59,7 @@ public class ContentApiTests
     [Fact]
     public async Task Put_WithIfMatchMismatch_Returns412()
     {
-        using var factory = new CmsLiteTestFactory();
+        using var factory = new CmsLiteTestFactoryNoAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
@@ -76,14 +76,14 @@ public class ContentApiTests
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CmsLiteDbContext>();
-        var item = await db.ContentItems.SingleAsync();
+        var item = await db.ContentItemsTable.SingleAsync();
         Assert.Equal(1, item.LatestVersion);
     }
 
     [Fact]
     public async Task Head_ReturnsMetadata()
     {
-        using var factory = new CmsLiteTestFactory();
+        using var factory = new CmsLiteTestFactoryNoAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
         await client.PutAsync("/v1/acme/article", CreateJsonContent(new { title = "one" }));
@@ -101,7 +101,7 @@ public class ContentApiTests
     [Fact]
     public async Task List_ReturnsFilteredItems()
     {
-        using var factory = new CmsLiteTestFactory();
+        using var factory = new CmsLiteTestFactoryNoAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
@@ -121,7 +121,7 @@ public class ContentApiTests
     [Fact]
     public async Task Delete_MarksItemAsDeleted()
     {
-        using var factory = new CmsLiteTestFactory();
+        using var factory = new CmsLiteTestFactoryNoAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
@@ -144,7 +144,7 @@ public class ContentApiTests
     [Fact]
     public async Task Versions_ReturnsDescendingOrder()
     {
-        using var factory = new CmsLiteTestFactory();
+        using var factory = new CmsLiteTestFactoryNoAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
@@ -169,7 +169,7 @@ public class ContentApiTests
     [Fact]
     public async Task Put_WithInvalidContentTypeOrEmptyBody_ReturnsBadRequest()
     {
-        using var factory = new CmsLiteTestFactory();
+        using var factory = new CmsLiteTestFactoryNoAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 

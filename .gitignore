@@ -63,3 +63,7 @@ data/
 cms-lite-web-client/node_modules/
 cms-lite-web-client/dist/
 cms-lite-web-client/build/
+
+# Environment variables and secrets
+prod.env
+dev.env

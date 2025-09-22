@@ -32,7 +32,14 @@ public class CmsLiteTestFactory : WebApplicationFactory<Program>, IDisposable
             {
                 ["AzureStorage:ConnectionString"] = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;",
                 ["AzureStorage:Container"] = "cms-test",
-                ["Database:Path"] = "test.db"
+                ["Database:Path"] = "test.db",
+                ["Jwt:Key"] = "test-jwt-secret-key-for-testing-32-characters-minimum-length",
+                ["Jwt:Issuer"] = "CmsLiteTest",
+                ["Jwt:Audience"] = "CmsLiteTestUsers",
+                ["Jwt:ValidateIssuer"] = "false",
+                ["Jwt:ValidateAudience"] = "false",
+                ["Jwt:ValidateLifetime"] = "true",
+                ["Jwt:ValidateIssuerSigningKey"] = "true"
             };
             configBuilder.AddInMemoryCollection(overrides!);
         });
@@ -45,7 +52,6 @@ public class CmsLiteTestFactory : WebApplicationFactory<Program>, IDisposable
             {
                 options.UseSqlite(_connection);
             });
-
             services.RemoveAll(typeof(IBlobRepo));
             services.AddSingleton<IBlobRepo, InMemoryBlobRepo>();
         });
@@ -53,7 +59,8 @@ public class CmsLiteTestFactory : WebApplicationFactory<Program>, IDisposable
 
     public async Task InitializeAsync()
     {
-        if (_initialized) return;
+        if (_initialized)
+            return;
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CmsLiteDbContext>();
         await db.Database.EnsureCreatedAsync();
