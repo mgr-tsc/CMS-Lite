@@ -24,7 +24,7 @@ public class CmsLiteTestFactoryAuth : WebApplicationFactory<Program>, IDisposabl
     private readonly SqliteConnection _connection;
     private bool _initialized;
     private const string TestJwtKey = "test-jwt-secret-key-for-testing-32-characters-minimum-length";
-    private const string TestTenantId = "acme";
+    public const string TestTenantId = "acme";
     private const string TestUserId = "test-user-id";
 
     public CmsLiteTestFactoryAuth()
@@ -158,7 +158,7 @@ public class CmsLiteTestFactoryAuth : WebApplicationFactory<Program>, IDisposabl
     }
 
     /// <summary>
-    /// Get the test tenant ID used in tests
+    /// Get the test tenant name used in tests (for URLs)
     /// </summary>
     public string TestTenant => TestTenantId;
 

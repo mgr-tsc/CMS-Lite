@@ -36,4 +36,10 @@ public class InMemoryBlobRepo : IBlobRepo
 
         return Task.FromResult<(long Size, string ETag)?>(null);
     }
+
+    public Task DeleteAsync(string key)
+    {
+        _store.TryRemove(key, out _);
+        return Task.CompletedTask;
+    }
 }

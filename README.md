@@ -13,10 +13,12 @@ A lightweight, multi-tenant JSON content management system with **JWT Authentica
 
 ### 📁 Content Management
 - **Multi-tenant**: Content scoped by tenant with authentication-based isolation
+- **Directory Structure**: Hierarchical organization with 5-level nesting (0-4)
 - **Versioned**: All content changes create new versions (append-only)
 - **Optimistic Concurrency**: ETag-based conflict resolution
 - **Soft Deletes**: Resources marked deleted, not physically removed
 - **Pagination**: Cursor-based for efficient large dataset handling
+- **Root Directory Auto-Creation**: Automatic root directory per tenant
 
 ### 🎨 Modern Frontend
 - **React 18 Application**: Modern responsive web interface
@@ -43,6 +45,9 @@ docker compose -f docker/docker-compose.dev.yaml up --build
 ```sh
 curl http://localhost:8080/health
 ```
+
+**API Documentation:**
+- **Swagger UI:** [http://localhost:8080/swagger](http://localhost:8080/swagger) (Interactive API documentation)
 
 **Stop services:**
 ```sh
@@ -99,20 +104,438 @@ curl -X POST http://localhost:8080/auth/refresh \
 
 ### 👥 User & Tenant Management (Public)
 - **POST /create-tenant** → Create new tenant with owner user
+
+### 👥 User & Tenant Management (Authenticated)
 - **POST /attach-user** → Attach user to existing tenant
 
 ### 📁 Content Management (Authenticated)
 - **PUT /v1/{tenant}/{resource}** → Create/update JSON content (auto-versioned)
+  - *Optional header*: `X-Directory-Id: {directoryId}` (if not provided, uses root directory)
 - **GET /v1/{tenant}/{resource}** → Retrieve content (latest or specific version)
 - **HEAD /v1/{tenant}/{resource}** → Get metadata without content body
 - **DELETE /v1/{tenant}/{resource}** → Soft delete content
 - **GET /v1/{tenant}** → List tenant resources (with filtering/pagination)
 - **GET /v1/{tenant}/{resource}/versions** → List all versions of resource
 
+### 📂 Directory Management (Authenticated)
+- **GET /v1/{tenant}/directories** → List directory tree for tenant
+- **POST /v1/{tenant}/directories** → Create new directory with optional parent
+- **GET /v1/{tenant}/directories/{id}** → Get directory details and metadata
+- **GET /v1/{tenant}/directories/{id}/contents** → Get content items in directory
+
+**Features:**
+- **Hierarchical Structure**: Support for up to 5 nesting levels (0-4)
+- **Root Directory**: Automatic creation per tenant
+- **Tenant Isolation**: Secure directory access control
+- **Content Organization**: Directory-based content assignment
+- **Read-Only Operations**: View and create directories (update/delete coming later)
+
 ### 🏥 System
 - **GET /health** → Service health check
 
 All content endpoints require **Bearer token authentication** and enforce **tenant isolation**.
+
+**Security Note**: Directory structure is not exposed in URLs for security. Directory assignment uses secure header-based approach.
+
+---
+
+## 📮 Postman API Testing
+
+### Complete Authentication & Content Workflow
+
+#### 1. **Authentication Flow**
+
+**Login** (POST /auth/login):
+```bash
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@email.com",
+  "password": "abc"
+}
+
+# Response:
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2024-01-01T12:30:00Z",
+  "user": {
+    "id": "test-user-id",
+    "email": "admin@email.com",
+    "firstName": "Test",
+    "lastName": "User",
+    "tenant": {
+      "id": "acme",
+      "name": "acme"
+    }
+  }
+}
+```
+
+**Get Current User** (GET /auth/me):
+```bash
+GET http://localhost:8080/auth/me
+Authorization: Bearer {your-jwt-token}
+```
+
+#### 2. **Content Management with Directory Support**
+
+**Create Content in Root Directory** (PUT /v1/{tenant}/{resource}):
+```bash
+PUT http://localhost:8080/v1/acme/config
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+
+{
+  "appName": "My Application",
+  "version": "1.0.0",
+  "settings": {
+    "theme": "dark",
+    "language": "en"
+  }
+}
+
+# Response (201 Created):
+{
+  "tenant": "acme",
+  "resource": "config",
+  "version": 1,
+  "etag": "etag-abc123...",
+  "sha256": "sha256hash...",
+  "size": 128
+}
+```
+
+**Create Content in Specific Directory** (PUT /v1/{tenant}/{resource}):
+```bash
+PUT http://localhost:8080/v1/acme/homepage
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+X-Directory-Id: {directory-id-from-your-setup}
+
+{
+  "title": "Welcome to Our Site",
+  "content": "This is the homepage content",
+  "published": true
+}
+```
+
+**Retrieve Content** (GET /v1/{tenant}/{resource}):
+```bash
+GET http://localhost:8080/v1/acme/config
+Authorization: Bearer {your-jwt-token}
+
+# Response includes content + ETag header
+```
+
+**Get Content Metadata** (HEAD /v1/{tenant}/{resource}):
+```bash
+HEAD http://localhost:8080/v1/acme/config
+Authorization: Bearer {your-jwt-token}
+
+# Response: Headers only (ETag, Content-Length, Content-Type)
+```
+
+**List Tenant Resources** (GET /v1/{tenant}):
+```bash
+GET http://localhost:8080/v1/acme
+Authorization: Bearer {your-jwt-token}
+
+# With filtering:
+GET http://localhost:8080/v1/acme?prefix=home&limit=10
+
+# Response:
+{
+  "items": [
+    {
+      "id": 1,
+      "tenantId": "acme",
+      "resource": "config",
+      "latestVersion": 1,
+      "etag": "etag-abc123...",
+      "byteSize": 128,
+      "sha256": "sha256hash...",
+      "updatedAtUtc": "2024-01-01T12:00:00Z"
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+**Update Content with Optimistic Concurrency** (PUT /v1/{tenant}/{resource}):
+```bash
+PUT http://localhost:8080/v1/acme/config
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+If-Match: {etag-from-previous-response}
+
+{
+  "appName": "My Updated Application",
+  "version": "2.0.0"
+}
+```
+
+**Get Content Versions** (GET /v1/{tenant}/{resource}/versions):
+```bash
+GET http://localhost:8080/v1/acme/config/versions
+Authorization: Bearer {your-jwt-token}
+
+# Response:
+[
+  {
+    "version": 2,
+    "etag": "etag-def456...",
+    "sha256": "newhash...",
+    "byteSize": 145,
+    "createdAtUtc": "2024-01-01T12:05:00Z"
+  },
+  {
+    "version": 1,
+    "etag": "etag-abc123...",
+    "sha256": "oldhash...",
+    "byteSize": 128,
+    "createdAtUtc": "2024-01-01T12:00:00Z"
+  }
+]
+```
+
+**Get Specific Version** (GET /v1/{tenant}/{resource}?version={version}):
+```bash
+GET http://localhost:8080/v1/acme/config?version=1
+Authorization: Bearer {your-jwt-token}
+```
+
+**Soft Delete Content** (DELETE /v1/{tenant}/{resource}):
+```bash
+DELETE http://localhost:8080/v1/acme/config
+Authorization: Bearer {your-jwt-token}
+
+# Response: 204 No Content
+```
+
+#### 3. **Directory Management Examples**
+
+**List Directory Tree** (GET /v1/{tenant}/directories):
+```bash
+GET http://localhost:8080/v1/acme/directories
+Authorization: Bearer {your-jwt-token}
+
+# Response:
+{
+  "directories": [
+    {
+      "id": "root-dir-id",
+      "name": "Root",
+      "level": 0,
+      "parentId": null,
+      "isRoot": true,
+      "contentCount": 2,
+      "createdAtUtc": "2024-01-01T12:00:00Z"
+    },
+    {
+      "id": "docs-dir-id",
+      "name": "Documents",
+      "level": 1,
+      "parentId": "root-dir-id",
+      "isRoot": false,
+      "contentCount": 5,
+      "createdAtUtc": "2024-01-01T12:30:00Z"
+    }
+  ],
+  "totalCount": 2
+}
+```
+
+**Create New Directory** (POST /v1/{tenant}/directories):
+```bash
+POST http://localhost:8080/v1/acme/directories
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+
+{
+  "name": "Projects",
+  "parentId": "root-dir-id"
+}
+
+# Response (201 Created):
+{
+  "id": "new-projects-dir-id",
+  "name": "Projects",
+  "level": 1,
+  "parentId": "root-dir-id",
+  "isRoot": false,
+  "createdAtUtc": "2024-01-01T12:45:00Z"
+}
+```
+
+**Get Directory Details** (GET /v1/{tenant}/directories/{id}):
+```bash
+GET http://localhost:8080/v1/acme/directories/docs-dir-id
+Authorization: Bearer {your-jwt-token}
+
+# Response:
+{
+  "id": "docs-dir-id",
+  "name": "Documents",
+  "level": 1,
+  "parentId": "root-dir-id",
+  "isRoot": false,
+  "isActive": true,
+  "contentCount": 5,
+  "subDirectoryCount": 2,
+  "createdAtUtc": "2024-01-01T12:30:00Z",
+  "updatedAtUtc": "2024-01-01T12:30:00Z"
+}
+```
+
+
+**Get Directory Contents** (GET /v1/{tenant}/directories/{id}/contents):
+```bash
+GET http://localhost:8080/v1/acme/directories/docs-dir-id/contents
+Authorization: Bearer {your-jwt-token}
+
+# Response:
+{
+  "directory": {
+    "id": "docs-dir-id",
+    "name": "Documentation",
+    "level": 1,
+    "parentId": "root-dir-id",
+    "isRoot": false
+  },
+  "contentItems": [
+    {
+      "id": 1,
+      "resource": "api-docs",
+      "latestVersion": 3,
+      "contentType": "application/json",
+      "byteSize": 2048,
+      "etag": "etag-xyz789...",
+      "createdAtUtc": "2024-01-01T12:35:00Z",
+      "updatedAtUtc": "2024-01-01T12:50:00Z"
+    }
+  ],
+  "nextCursor": null,
+  "totalCount": 1
+}
+```
+
+
+#### 4. **Directory Security Testing**
+
+**Test Invalid Directory ID**:
+```bash
+PUT http://localhost:8080/v1/acme/test-content
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+X-Directory-Id: invalid-directory-id
+
+{
+  "test": "content"
+}
+
+# Expected: 400 Bad Request
+# Response: "Invalid directory ID: invalid-directory-id"
+```
+
+**Test Cross-Tenant Directory Access**:
+```bash
+PUT http://localhost:8080/v1/acme/test-content
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+X-Directory-Id: {directory-id-from-different-tenant}
+
+{
+  "test": "content"
+}
+
+# Expected: 400 Bad Request
+# Response: "Invalid directory ID: {directory-id}"
+```
+
+
+**Test Directory Nesting Limit**:
+```bash
+# After creating 5 levels (0,1,2,3,4), attempt to create 6th level
+POST http://localhost:8080/v1/acme/directories
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+
+{
+  "name": "Level5_ShouldFail",
+  "parentId": "level-4-directory-id"
+}
+
+# Expected: 400 Bad Request
+# Response: "Maximum directory nesting level (5) exceeded. Cannot create subdirectory."
+```
+
+#### 5. **Error Scenarios**
+
+**Unauthorized Request**:
+```bash
+GET http://localhost:8080/v1/acme/config
+# No Authorization header
+
+# Expected: 401 Unauthorized
+```
+
+**Invalid Tenant**:
+```bash
+GET http://localhost:8080/v1/nonexistent-tenant/config
+Authorization: Bearer {your-jwt-token}
+
+# Expected: 400 Bad Request
+# Response: "Tenant 'nonexistent-tenant' not found"
+```
+
+**Optimistic Concurrency Conflict**:
+```bash
+PUT http://localhost:8080/v1/acme/config
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+If-Match: wrong-etag
+
+{
+  "updated": "content"
+}
+
+# Expected: 412 Precondition Failed
+```
+
+#### 6. **Logout & Token Management**
+
+**Logout** (POST /auth/logout):
+```bash
+POST http://localhost:8080/auth/logout
+Authorization: Bearer {your-jwt-token}
+
+# Response: 200 OK
+# Token is now invalidated
+```
+
+**Refresh Token** (POST /auth/refresh):
+```bash
+POST http://localhost:8080/auth/refresh
+Content-Type: application/json
+
+{
+  "token": "{your-current-jwt-token}"
+}
+
+# Response: New token with rotated session ID
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2024-01-01T13:00:00Z"
+}
+```
+
+### Postman Environment Variables
+Set up these variables for easy testing:
+- `baseUrl`: `http://localhost:8080`
+- `jwtToken`: `{set-from-login-response}`
+- `tenant`: `acme`
+- `etag`: `{set-from-content-responses}`
 
 ---
 
@@ -131,7 +554,8 @@ All content endpoints require **Bearer token authentication** and enforce **tena
 - **Tenant**: Multi-tenant organization entities
 - **User**: User accounts with tenant association
 - **UserSession**: JWT session tracking for revocation
-- **ContentItem**: Latest version metadata per tenant/resource
+- **Directory**: Hierarchical folder structure with 5-level nesting limit
+- **ContentItem**: Latest version metadata per tenant/resource with directory assignment
 - **ContentVersion**: Complete version history (append-only)
 
 ### Security Architecture
@@ -280,6 +704,10 @@ dotnet test --logger "console;verbosity=detailed"
 ### Test Coverage Includes
 - ✅ Authentication flow (login/logout/refresh/token rotation)
 - ✅ Content CRUD operations with tenant isolation
+- ✅ Directory structure and hierarchical organization
+- ✅ Directory nesting validation (5-level limit)
+- ✅ Root directory auto-creation and protection
+- ✅ Compensation pattern for blob/database consistency
 - ✅ JWT middleware and authorization
 - ✅ Version management and rollback
 - ✅ Optimistic concurrency control
@@ -293,12 +721,15 @@ dotnet test --logger "console;verbosity=detailed"
 ### ✅ Completed Features
 - **🔐 Complete Authentication System**: JWT with session management and token rotation
 - **🏢 Multi-tenant Content API**: All CRUD operations with tenant isolation
+- **📂 Directory Management**: Hierarchical organization with 5-level nesting and security
+- **⚖️ Transactional Consistency**: Compensation pattern for blob/database operations
+- **🛡️ Enhanced Security**: Directory validation, tenant isolation, root protection
 - **🎨 React Frontend**: Responsive UI with authentication integration
-- **🗄️ Database Schema**: Optimized relationships with proper foreign keys
+- **🗄️ Database Schema**: Optimized relationships with directory support
 - **🛡️ Security Middleware**: Authentication and tenant validation
-- **🧪 Comprehensive Testing**: Unit and integration test coverage
+- **🧪 Comprehensive Testing**: 37 tests with directory API and compensation coverage
 - **🐳 Docker Environment**: Full development containerization
-- **📚 OpenAPI Documentation**: Swagger integration for API endpoints
+- **📚 OpenAPI Documentation**: Swagger UI with JWT authentication support
 
 ### 🚧 Current Development Focus
 - **Frontend-Backend Integration**: Connecting React UI to authentication endpoints
@@ -341,7 +772,7 @@ dotnet test --logger "console;verbosity=detailed"
 - **Comprehensive development guide** → Detailed API documentation and examples
 - **Authentication implementation** → JWT system and security details
 - **Database schema design** → Entity relationships and architecture decisions
-- **📖 OpenAPI/Swagger** → Interactive API documentation at `/swagger` (development)
+- **📖 OpenAPI/Swagger** → Interactive API documentation with JWT auth at `/swagger`
 
 ---
 
@@ -384,6 +815,59 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 2. **Start environment**: `docker compose -f docker/docker-compose.dev.yaml up --build`
 3. **Access web app**: [http://localhost:9090](http://localhost:9090)
 4. **Login with demo**: `admin@email.com` / `abc`
-5. **Explore API**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+5. **Explore API**: [http://localhost:8080/swagger](http://localhost:8080/swagger) (Interactive Swagger UI)
 
 **Ready for full-stack development with authentication! 🎯**
+
+---
+
+## 📖 API Documentation
+
+### Swagger/OpenAPI Integration
+
+CMS-Lite includes comprehensive API documentation via Swagger UI with full JWT authentication support.
+
+**Access Swagger UI:**
+- **Development**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+- **Docker**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+
+### Using Swagger UI with Authentication
+
+1. **Access Swagger UI** at `/swagger` in development mode
+2. **Authenticate via API**:
+   - Use the `/auth/login` endpoint with demo credentials (`admin@email.com` / `abc`)
+   - Copy the JWT token from the response
+3. **Authorize in Swagger**:
+   - Click the "Authorize" button in Swagger UI
+   - Enter `Bearer {your-jwt-token}` in the Authorization field
+   - Click "Authorize"
+4. **Test Protected Endpoints**:
+   - All authenticated endpoints will now include the JWT token automatically
+   - Try endpoints like `/v1/{tenant}/directories` or `/v1/{tenant}/{resource}`
+
+### Swagger Features
+
+- ✅ **Interactive API Testing**: Try all endpoints directly from the browser
+- ✅ **JWT Authentication**: Built-in authorization with Bearer token support
+- ✅ **Request/Response Examples**: Auto-generated examples for all endpoints
+- ✅ **Schema Documentation**: Complete data model documentation
+- ✅ **Parameter Validation**: Real-time validation of request parameters
+- ✅ **Error Response Examples**: Comprehensive error handling documentation
+
+### OpenAPI Specification
+
+The OpenAPI specification is automatically generated and available at:
+- **JSON**: `/swagger/v1/swagger.json`
+- **UI**: `/swagger` (interactive documentation)
+
+---
+
+## 📝 TODO Items
+
+### Authentication Issues
+- [ ] **Refresh Token Endpoint Returning 401**: Once the user has signed in, the refresh token endpoint is returning 401 error status code instead of properly refreshing the token
+
+### Feature Enhancements
+- [ ] **Implement Rename Directories Feature**: Add functionality to rename existing directories while maintaining parent-child relationships
+- [ ] **Soft Delete for Users in DB**: Implement soft delete for users and ensure it also removes every UserSession associated with the user
+- [ ] **Soft Delete for Tenants**: Implement soft delete for tenants where every user should become inactive and every directory, content etc should also become inactive

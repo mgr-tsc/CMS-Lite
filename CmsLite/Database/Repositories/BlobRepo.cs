@@ -45,4 +45,10 @@ public class BlobRepo : IBlobRepo
         var props = await blob.GetPropertiesAsync();
         return (props.Value.ContentLength, props.Value.ETag.ToString());
     }
+
+    public Task DeleteAsync(string key)
+    {
+        var blob = _container.GetBlobClient(key);
+        return blob.DeleteIfExistsAsync();
+    }
 }

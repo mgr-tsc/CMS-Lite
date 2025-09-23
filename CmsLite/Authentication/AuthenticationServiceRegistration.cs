@@ -15,10 +15,32 @@ public static class AuthenticationServiceRegistration
         builder.Services.AddAuthorization();
         // Register authentication service and repositories
         builder.Services.AddScoped<ICmsLiteAuthenticationService, CmsLiteAuthenticationService>();
+    }
+
+    /// <summary>
+    /// Register all the repositories required
+    /// <param name="builder">
+    /// The WebApplicationBuilder to add repositories to
+    /// </param>
+    /// </summary>
+    public static void AddCmsRepositories(this WebApplicationBuilder builder)
+    {
+        // Register repositories
         builder.Services.AddScoped<IUserRepo, UserRepo>();
         builder.Services.AddScoped<IUserSessionRepo, UserSessionRepo>();
         builder.Services.AddScoped<ITenantRepo, TenantRepo>();
-        // Add logging
+        builder.Services.AddScoped<IDirectoryRepo, DirectoryRepo>();
+        builder.Services.AddScoped<IContentItemRepo, ContentItemRepo>();
+    }
+
+    /// <summary>
+    /// Registers logging services
+    /// </summary>
+    /// <param name="builder">
+    /// The WebApplicationBuilder to add logging services to
+    /// </param>
+    public static void AddLoggingServices(this WebApplicationBuilder builder)
+    {
         builder.Services.AddLogging();
     }
 

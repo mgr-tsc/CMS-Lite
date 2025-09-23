@@ -8,6 +8,7 @@ namespace CmsLite.Content;
 
 public static class ContentEndpoints
 {
+
     public static void MapContentEndpoints(this WebApplication app)
     {
         var contentGroup = app.MapGroup("/v1").WithTags("Content Management");
@@ -18,7 +19,8 @@ public static class ContentEndpoints
             string resource,
             HttpRequest req,
             CmsLiteDbContext db,
-            IBlobRepo blobs) =>
+            IBlobRepo blobs,
+            IDirectoryRepo directoryRepo) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
             if (!req.ContentType?.StartsWith("application/json") ?? true)
@@ -46,50 +48,97 @@ public static class ContentEndpoints
             // Determine next version and blob key
             var nextVersion = (item?.LatestVersion ?? 0) + 1;
             var blobKey = $"{tenant}/{resource}/v{nextVersion}.json";
-            // Upload content to blob storage
+            // Get the actual tenant ID from the tenant name
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
+
+            // Handle directory assignment
+            string directoryId;
+            var directoryHeader = req.Headers["X-Directory-Id"].FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(directoryHeader))
+            {
+                // Validate that the specified directory exists and belongs to the tenant
+                var specifiedDirectory = await directoryRepo.GetDirectoryByIdAsync(directoryHeader);
+                if (specifiedDirectory == null || specifiedDirectory.TenantId != tenantId || !specifiedDirectory.IsActive)
+                {
+                    return Results.BadRequest($"Invalid directory ID: {directoryHeader}");
+                }
+                directoryId = directoryHeader;
+            }
+            else
+            {
+                // No directory specified - use or create root directory
+                var rootDirectory = await directoryRepo.GetOrCreateRootDirectoryAsync(tenantId);
+                directoryId = rootDirectory.Id;
+            }
+            // Upload blob first, then update database with rollback on failure
+            string? uploadedBlobKey = null;
             try
             {
                 var (etag, size) = await blobs.UploadJsonAsync(blobKey, bytes);
-                // Update or create content item metadata
-                if (item == null)
+                uploadedBlobKey = blobKey; // Track for potential cleanup
+                try
                 {
-                    item = new DbSet.ContentItem
+                    // Update or create content item metadata
+                    if (item == null)
                     {
-                        TenantId = tenant,
+                        item = new DbSet.ContentItem
+                        {
+                            TenantId = tenantId,
+                            DirectoryId = directoryId,
+                            Resource = resource,
+                            LatestVersion = nextVersion,
+                            ContentType = "application/json",
+                            ByteSize = size,
+                            Sha256 = sha256,
+                            ETag = etag,
+                            CreatedAtUtc = DateTime.UtcNow,
+                            UpdatedAtUtc = DateTime.UtcNow,
+                            IsDeleted = false
+                        };
+                        db.ContentItemsTable.Add(item);
+                    }
+                    else
+                    {
+                        item.LatestVersion = nextVersion;
+                        item.ByteSize = size;
+                        item.Sha256 = sha256;
+                        item.ETag = etag;
+                        item.UpdatedAtUtc = DateTime.UtcNow;
+                        item.IsDeleted = false;
+                    }
+                    // Create version history record
+                    db.ContentVersionsTable.Add(new DbSet.ContentVersion
+                    {
+                        TenantId = tenantId,
                         Resource = resource,
-                        LatestVersion = nextVersion,
-                        ContentType = "application/json",
+                        Version = nextVersion,
                         ByteSize = size,
                         Sha256 = sha256,
                         ETag = etag,
-                        CreatedAtUtc = DateTime.UtcNow,
-                        UpdatedAtUtc = DateTime.UtcNow,
-                        IsDeleted = 0
-                    };
-                    db.ContentItemsTable.Add(item);
+                        CreatedAtUtc = DateTime.UtcNow
+                    });
+                    await db.SaveChangesAsync();
+                    return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}", new { tenant, resource, version = nextVersion, etag, sha256, size });
                 }
-                else
+                catch (Exception)
                 {
-                    item.LatestVersion = nextVersion;
-                    item.ByteSize = size;
-                    item.Sha256 = sha256;
-                    item.ETag = etag;
-                    item.UpdatedAtUtc = DateTime.UtcNow;
-                    item.IsDeleted = 0;
+                    // Compensation: Clean up uploaded blob on database failure
+                    if (uploadedBlobKey != null)
+                    {
+                        try
+                        {
+                            await blobs.DeleteAsync(uploadedBlobKey);
+                        }
+                        catch
+                        {
+                            // Log blob cleanup failure but don't throw (avoid masking original exception)
+                            // TODO: Implement logging here
+                        }
+                    }
+                    throw; // Re-throw the database exception
                 }
-                // Create version history record
-                db.ContentVersionsTable.Add(new DbSet.ContentVersion
-                {
-                    TenantId = tenant,
-                    Resource = resource,
-                    Version = nextVersion,
-                    ByteSize = size,
-                    Sha256 = sha256,
-                    ETag = etag,
-                    CreatedAtUtc = DateTime.UtcNow
-                });
-                await db.SaveChangesAsync();
-                return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}", new { tenant, resource, version = nextVersion, etag, sha256, size });
             }
             catch (ArgumentException ex)
             {
@@ -115,8 +164,12 @@ public static class ContentEndpoints
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
+            // Get the actual tenant ID from the tenant name
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
+
             var latest = await db.ContentItemsTable
-                .SingleOrDefaultAsync(x => x.TenantId == tenant && x.Resource == resource && x.IsDeleted == 0);
+                .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource && x.IsDeleted == false);
             if (latest == null) return Results.NotFound();
 
             var v = version ?? latest.LatestVersion;
@@ -144,8 +197,12 @@ public static class ContentEndpoints
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
+            // Get the actual tenant ID from the tenant name
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
+
             var latest = await db.ContentItemsTable
-                .SingleOrDefaultAsync(x => x.TenantId == tenant && x.Resource == resource && x.IsDeleted == 0);
+                .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource && x.IsDeleted == false);
             if (latest == null) return Results.NotFound();
 
             var v = version ?? latest.LatestVersion;
@@ -173,10 +230,14 @@ public static class ContentEndpoints
             CmsLiteDbContext db) =>
         {
             var take = Math.Clamp(limit ?? 50, 1, 200);
-            var q = db.ContentItemsTable.AsQueryable().Where(x => x.TenantId == tenant);
+            // Get the actual tenant ID from the tenant name
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
+
+            var q = db.ContentItemsTable.AsQueryable().Where(x => x.TenantId == tenantId);
 
             if (!(includeDeleted ?? false))
-                q = q.Where(x => x.IsDeleted == 0);
+                q = q.Where(x => x.IsDeleted == false);
 
             if (!string.IsNullOrEmpty(prefix))
             {
@@ -223,11 +284,15 @@ public static class ContentEndpoints
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
+            // Get the actual tenant ID from the tenant name
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
+
             var item = await db.ContentItemsTable
-                .SingleOrDefaultAsync(x => x.TenantId == tenant && x.Resource == resource);
+                .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource);
             if (item == null) return Results.NotFound();
 
-            item.IsDeleted = 1;
+            item.IsDeleted = true;
             item.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
@@ -244,9 +309,12 @@ public static class ContentEndpoints
             CmsLiteDbContext db) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
+            // Get the actual tenant ID from the tenant name
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
 
             var versions = await db.ContentVersionsTable
-                .Where(x => x.TenantId == tenant && x.Resource == resource)
+                .Where(x => x.TenantId == tenantId && x.Resource == resource)
                 .OrderByDescending(x => x.Version)
                 .Select(x => new
                 {
