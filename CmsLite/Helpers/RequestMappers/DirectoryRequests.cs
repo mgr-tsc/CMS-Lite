@@ -1,7 +1,7 @@
 using System;
-namespace CmsLite.Helpers.RequestMappers;
 using System.ComponentModel.DataAnnotations;
 
+namespace CmsLite.Helpers.RequestMappers;
 
 public record CreateDirectoryRequest(
     [Required][StringLength(128, MinimumLength = 1)] string Name,

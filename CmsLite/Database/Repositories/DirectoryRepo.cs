@@ -14,7 +14,10 @@ public class DirectoryRepo : IDirectoryRepo
 
     public async Task<DbSet.Directory?> GetDirectoryByIdAsync(string directoryId)
     {
-        return await dbContext.DirectoriesTable.FindAsync(directoryId);
+        return await dbContext.DirectoriesTable
+            .Include(d => d.ContentItems.Where(ci => !ci.IsDeleted))
+            .Include(d => d.SubDirectories.Where(sd => sd.IsActive))
+            .FirstOrDefaultAsync(d => d.Id == directoryId);
     }
 
     public async Task CreateDirectoryAsync(DbSet.Directory directory)
@@ -72,9 +75,28 @@ public class DirectoryRepo : IDirectoryRepo
                             WHERE D.IsActive = 1 AND D.TenantId = {0}
             )
         SELECT Id, TenantId, ParentId, Name, CreatedAtUtc, UpdatedAtUtc, IsActive, Level FROM DIRECTORY_TREE ORDER BY Level, Name";
-        return await dbContext.DirectoriesTable
+
+        var directories = await dbContext.DirectoriesTable
             .FromSqlRaw(sqlQuery, tenantId)
             .ToListAsync();
+
+        // Load ContentItems separately for each directory to get proper counts
+        foreach (var directory in directories)
+        {
+            await dbContext.Entry(directory)
+                .Collection(d => d.ContentItems)
+                .Query()
+                .Where(ci => !ci.IsDeleted)
+                .LoadAsync();
+
+            await dbContext.Entry(directory)
+                .Collection(d => d.SubDirectories)
+                .Query()
+                .Where(sd => sd.IsActive)
+                .LoadAsync();
+        }
+
+        return directories;
     }
 
     public async Task<int> GetDirectoryDepthAsync(string directoryId)

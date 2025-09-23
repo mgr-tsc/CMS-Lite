@@ -5,6 +5,7 @@ using CmsLite.Database;
 using CmsLite.Authentication;
 using CmsLite.Content;
 using CmsLite.Helpers.RequestMappers;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,48 @@ builder.Services.AddSingleton<IBlobRepo, BlobRepo>();
 builder.AddCmsLiteAuthentication();
 builder.AddCmsRepositories();
 builder.AddLoggingServices();
+
+// Add Swagger/OpenAPI services
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "CMS-Lite API",
+        Version = "v1",
+        Description = "A lightweight, multi-tenant JSON content management system with JWT authentication",
+        Contact = new OpenApiContact
+        {
+            Name = "CMS-Lite",
+            Url = new Uri("https://github.com/mgr-tsc/cms-lite")
+        }
+    });
+
+    // Add JWT Authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 var app = builder.Build();
 
 // Health endpoint
@@ -134,17 +177,28 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
-app.UseCmsLiteAuthentication();
-app.MapAuthenticationEndpoints();
-app.MapContentEndpoints();
-app.MapDirectoryEndpoints();
+// Configure Swagger middleware
 if (app.Environment.IsDevelopment())
 {
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CMS-Lite API v1");
+        c.RoutePrefix = "swagger";
+        c.DocumentTitle = "CMS-Lite API Documentation";
+        c.DisplayRequestDuration();
+        c.EnableTryItOutByDefault();
+    });
     app.UseDeveloperExceptionPage();
 }
 else
 {
     app.UseHttpsRedirection();
 }
+
+app.UseCmsLiteAuthentication();
+app.MapAuthenticationEndpoints();
+app.MapContentEndpoints();
+app.MapDirectoryEndpoints();
 app.Run();
 public partial class Program { }

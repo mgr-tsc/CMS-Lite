@@ -46,6 +46,9 @@ docker compose -f docker/docker-compose.dev.yaml up --build
 curl http://localhost:8080/health
 ```
 
+**API Documentation:**
+- **Swagger UI:** [http://localhost:8080/swagger](http://localhost:8080/swagger) (Interactive API documentation)
+
 **Stop services:**
 ```sh
 docker compose -f docker/docker-compose.dev.yaml down
@@ -724,9 +727,9 @@ dotnet test --logger "console;verbosity=detailed"
 - **🎨 React Frontend**: Responsive UI with authentication integration
 - **🗄️ Database Schema**: Optimized relationships with directory support
 - **🛡️ Security Middleware**: Authentication and tenant validation
-- **🧪 Comprehensive Testing**: 36 tests with directory API and compensation coverage
+- **🧪 Comprehensive Testing**: 37 tests with directory API and compensation coverage
 - **🐳 Docker Environment**: Full development containerization
-- **📚 OpenAPI Documentation**: Swagger integration for API endpoints
+- **📚 OpenAPI Documentation**: Swagger UI with JWT authentication support
 
 ### 🚧 Current Development Focus
 - **Frontend-Backend Integration**: Connecting React UI to authentication endpoints
@@ -769,7 +772,7 @@ dotnet test --logger "console;verbosity=detailed"
 - **Comprehensive development guide** → Detailed API documentation and examples
 - **Authentication implementation** → JWT system and security details
 - **Database schema design** → Entity relationships and architecture decisions
-- **📖 OpenAPI/Swagger** → Interactive API documentation at `/swagger` (development)
+- **📖 OpenAPI/Swagger** → Interactive API documentation with JWT auth at `/swagger`
 
 ---
 
@@ -812,6 +815,59 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 2. **Start environment**: `docker compose -f docker/docker-compose.dev.yaml up --build`
 3. **Access web app**: [http://localhost:9090](http://localhost:9090)
 4. **Login with demo**: `admin@email.com` / `abc`
-5. **Explore API**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+5. **Explore API**: [http://localhost:8080/swagger](http://localhost:8080/swagger) (Interactive Swagger UI)
 
 **Ready for full-stack development with authentication! 🎯**
+
+---
+
+## 📖 API Documentation
+
+### Swagger/OpenAPI Integration
+
+CMS-Lite includes comprehensive API documentation via Swagger UI with full JWT authentication support.
+
+**Access Swagger UI:**
+- **Development**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+- **Docker**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+
+### Using Swagger UI with Authentication
+
+1. **Access Swagger UI** at `/swagger` in development mode
+2. **Authenticate via API**:
+   - Use the `/auth/login` endpoint with demo credentials (`admin@email.com` / `abc`)
+   - Copy the JWT token from the response
+3. **Authorize in Swagger**:
+   - Click the "Authorize" button in Swagger UI
+   - Enter `Bearer {your-jwt-token}` in the Authorization field
+   - Click "Authorize"
+4. **Test Protected Endpoints**:
+   - All authenticated endpoints will now include the JWT token automatically
+   - Try endpoints like `/v1/{tenant}/directories` or `/v1/{tenant}/{resource}`
+
+### Swagger Features
+
+- ✅ **Interactive API Testing**: Try all endpoints directly from the browser
+- ✅ **JWT Authentication**: Built-in authorization with Bearer token support
+- ✅ **Request/Response Examples**: Auto-generated examples for all endpoints
+- ✅ **Schema Documentation**: Complete data model documentation
+- ✅ **Parameter Validation**: Real-time validation of request parameters
+- ✅ **Error Response Examples**: Comprehensive error handling documentation
+
+### OpenAPI Specification
+
+The OpenAPI specification is automatically generated and available at:
+- **JSON**: `/swagger/v1/swagger.json`
+- **UI**: `/swagger` (interactive documentation)
+
+---
+
+## 📝 TODO Items
+
+### Authentication Issues
+- [ ] **Refresh Token Endpoint Returning 401**: Once the user has signed in, the refresh token endpoint is returning 401 error status code instead of properly refreshing the token
+
+### Feature Enhancements
+- [ ] **Implement Rename Directories Feature**: Add functionality to rename existing directories while maintaining parent-child relationships
+- [ ] **Soft Delete for Users in DB**: Implement soft delete for users and ensure it also removes every UserSession associated with the user
+- [ ] **Soft Delete for Tenants**: Implement soft delete for tenants where every user should become inactive and every directory, content etc should also become inactive

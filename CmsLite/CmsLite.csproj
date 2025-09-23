@@ -24,6 +24,7 @@
   <!-- Configuration / logging helpers (optional, but nice to have) -->
   <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
   <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+  <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
 </ItemGroup>
 
   <ItemGroup>

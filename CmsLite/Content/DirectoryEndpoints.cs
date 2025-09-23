@@ -1,7 +1,7 @@
-using System.ComponentModel.DataAnnotations;
 using CmsLite.Database;
 using CmsLite.Database.Repositories;
 using CmsLite.Helpers;
+using CmsLite.Helpers.RequestMappers;
 using Microsoft.EntityFrameworkCore;
 
 namespace CmsLite.Content;
@@ -76,7 +76,7 @@ public static class DirectoryEndpoints
                 directory.CreatedAtUtc,
                 directory.UpdatedAtUtc,
                 IsRoot = directory.ParentId == null,
-                IsActive = directory.IsActive,
+                directory.IsActive,
                 ContentCount = directory.ContentItems?.Count ?? 0,
                 SubDirectoryCount = directory.SubDirectories?.Count ?? 0
             };
@@ -232,9 +232,3 @@ public static class DirectoryEndpoints
         .WithDescription("Returns content items within a specific directory with pagination");
     }
 }
-
-// DTOs for request/response
-public record CreateDirectoryRequest(
-    [Required] [StringLength(128, MinimumLength = 1)] string Name,
-    string? ParentId = null
-);

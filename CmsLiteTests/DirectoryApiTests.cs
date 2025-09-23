@@ -260,6 +260,85 @@ public class DirectoryApiTests
     }
 
     [Fact]
+    public async Task GetDirectoryTree_WithContent_ReturnsCorrectContentCount()
+    {
+        using var factory = new CmsLiteTestFactoryAuth();
+        await factory.InitializeAsync();
+        var client = factory.CreateAuthenticatedClient();
+
+        using var scope = factory.Services.CreateScope();
+        var directoryRepo = scope.ServiceProvider.GetRequiredService<IDirectoryRepo>();
+
+        var rootDir = await directoryRepo.GetOrCreateRootDirectoryAsync(CmsLiteTestFactoryAuth.TestTenantId);
+
+        // Create a custom directory
+        var docsDir = new DbSet.Directory
+        {
+            Id = Guid.NewGuid().ToString(),
+            TenantId = CmsLiteTestFactoryAuth.TestTenantId,
+            ParentId = rootDir.Id,
+            Name = "Documents",
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+            IsActive = true
+        };
+        await directoryRepo.CreateDirectoryAsync(docsDir);
+
+        // Create content in root directory
+        var rootContentPayload = new { title = "Root Content" };
+        var rootContentRequest = JsonSerializer.Serialize(rootContentPayload);
+        var rootContentResponse = await client.PutAsync($"/v1/{factory.TestTenant}/root-content",
+            new StringContent(rootContentRequest, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, rootContentResponse.StatusCode);
+
+        // Create content in Documents directory
+        var docsContentPayload = new { title = "Doc Content" };
+        var docsContentRequest = JsonSerializer.Serialize(docsContentPayload);
+        var docsRequest = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/doc-content")
+        {
+            Content = new StringContent(docsContentRequest, Encoding.UTF8, "application/json")
+        };
+        docsRequest.Headers.Add("X-Directory-Id", docsDir.Id);
+        var docsContentResponse = await client.SendAsync(docsRequest);
+        Assert.Equal(HttpStatusCode.Created, docsContentResponse.StatusCode);
+
+        // Get directory tree and verify content counts
+        var treeResponse = await client.GetAsync($"/v1/{factory.TestTenant}/directories");
+        Assert.Equal(HttpStatusCode.OK, treeResponse.StatusCode);
+
+        var treeContent = await treeResponse.Content.ReadAsStringAsync();
+        var treeResult = JsonSerializer.Deserialize<JsonElement>(treeContent);
+
+        var directories = treeResult.GetProperty("directories").EnumerateArray().ToList();
+
+        // Find root directory and verify content count
+        var rootDirResponse = directories.FirstOrDefault(d => d.GetProperty("name").GetString() == "Root");
+        Assert.True(rootDirResponse.ValueKind != JsonValueKind.Undefined);
+        Assert.Equal(1, rootDirResponse.GetProperty("contentCount").GetInt32());
+
+        // Find documents directory and verify content count
+        var docsDirResponse = directories.FirstOrDefault(d => d.GetProperty("name").GetString() == "Documents");
+        Assert.True(docsDirResponse.ValueKind != JsonValueKind.Undefined);
+        Assert.Equal(1, docsDirResponse.GetProperty("contentCount").GetInt32());
+
+        // Also test specific directory endpoint for root
+        var rootDetailsResponse = await client.GetAsync($"/v1/{factory.TestTenant}/directories/{rootDir.Id}");
+        Assert.Equal(HttpStatusCode.OK, rootDetailsResponse.StatusCode);
+
+        var rootDetailsContent = await rootDetailsResponse.Content.ReadAsStringAsync();
+        var rootDetailsResult = JsonSerializer.Deserialize<JsonElement>(rootDetailsContent);
+        Assert.Equal(1, rootDetailsResult.GetProperty("contentCount").GetInt32());
+
+        // Also test specific directory endpoint for Documents
+        var docsDetailsResponse = await client.GetAsync($"/v1/{factory.TestTenant}/directories/{docsDir.Id}");
+        Assert.Equal(HttpStatusCode.OK, docsDetailsResponse.StatusCode);
+
+        var docsDetailsContent = await docsDetailsResponse.Content.ReadAsStringAsync();
+        var docsDetailsResult = JsonSerializer.Deserialize<JsonElement>(docsDetailsContent);
+        Assert.Equal(1, docsDetailsResult.GetProperty("contentCount").GetInt32());
+    }
+
+    [Fact]
     public async Task DirectoryEndpoints_RequireAuthentication()
     {
         using var factory = new CmsLiteTestFactoryAuth();
