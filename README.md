@@ -218,11 +218,34 @@ CMS-Lite/
 - Docker (for Azurite emulator)
 
 ### API Development
+
+**For Local Development (with HTTPS):**
 ```bash
 dotnet restore
-dotnet run --project CmsLite          # API with authentication at :5000
+dotnet run --project CmsLite          # API at http://localhost:8080 + https://localhost:5050
 dotnet test                           # Run comprehensive test suite
 ```
+
+**Environment Configuration:**
+- **Local Development**: Uses `Local` environment → `appsettings.Local.json` (with HTTPS support)
+- **Docker Development**: Uses `Development` environment → `appsettings.Development.json` (HTTP only)
+
+**⚠️ Local Development Requirements:**
+When running locally (without Docker), you need Azurite emulator running:
+```bash
+# Install Azurite globally (one-time setup)
+npm install -g azurite
+
+# Start Azurite emulator (required for local development)
+azurite --silent --location ./azurite-data --debug ./azurite-debug.log
+
+# Azurite will run on:
+# - Blob service: http://127.0.0.1:10000
+# - Queue service: http://127.0.0.1:10001
+# - Table service: http://127.0.0.1:10002
+```
+
+The `appsettings.Local.json` is configured to use `UseDevelopmentStorage=true` which connects to these default Azurite ports.
 
 ### Frontend Development
 ```bash
@@ -315,10 +338,9 @@ dotnet test --logger "console;verbosity=detailed"
 
 ## 📚 Documentation
 
-- **🏗️ WARP.md** → Comprehensive development guide with API documentation
-- **🤖 CLAUDE.md** → AI assistant guidance and project context
-- **🔐 AUTH_API_BRAINSTORM.md** → Authentication implementation details
-- **🗄️ AUTH_DATABASE_BRAINSTORM.md** → Database schema design decisions
+- **Comprehensive development guide** → Detailed API documentation and examples
+- **Authentication implementation** → JWT system and security details
+- **Database schema design** → Entity relationships and architecture decisions
 - **📖 OpenAPI/Swagger** → Interactive API documentation at `/swagger` (development)
 
 ---

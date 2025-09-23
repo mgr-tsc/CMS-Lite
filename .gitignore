@@ -69,3 +69,6 @@ prod.env
 dev.env
 __azurite*.json
 __blobstorage__/
+
+CmsLite/cms.sqlite
+CmsLite/cms.sqlite-*

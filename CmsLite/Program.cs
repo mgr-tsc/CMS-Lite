@@ -26,7 +26,7 @@ var app = builder.Build();
 // Health endpoint
 app.MapGet("/health", (IHostEnvironment env) =>
 {
-    var envValue = env.IsDevelopment() ? "dev" : "prod";
+    var envValue = env.EnvironmentName;
     return Results.Ok(new { env = envValue });
 }).WithDescription("Check the health of the application.").WithTags("Health");
 
