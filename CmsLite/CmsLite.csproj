@@ -26,4 +26,8 @@
   <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
 </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Directory/" />
+  </ItemGroup>
+
 </Project>

@@ -21,6 +21,8 @@ builder.Services.AddDbContext<CmsLiteDbContext>(options =>
 builder.Services.AddSingleton(_ => new BlobServiceClient(storageConnectionString));
 builder.Services.AddSingleton<IBlobRepo, BlobRepo>();
 builder.AddCmsLiteAuthentication();
+builder.AddCmsRepositories();
+builder.AddLoggingServices();
 var app = builder.Build();
 
 // Health endpoint
@@ -71,7 +73,7 @@ app.MapPost("/attach-user", async (SignUpRequest request, IUserRepo userRepo, IT
     });
 }).RequireAuthorization().WithDescription("Attach a new user to an existing tenant.").WithTags("SignUp");
 
-app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo tenantRepo, IUserRepo userRepo, CmsLiteDbContext dbContext) =>
+app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo tenantRepo, IUserRepo userRepo, IDirectoryRepo directoryRepo, CmsLiteDbContext dbContext) =>
 {
     var existingTenant = await tenantRepo.GetTenantByNameAsync(request.Name);
     if (existingTenant != null)
@@ -97,7 +99,16 @@ app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo te
             TenantId = newTenant.Id,
             IsActive = true
         };
+        var newRootDirectory = new DbSet.Directory
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "root",
+            TenantId = newTenant.Id,
+            Level = 0,
+            ParentId = null
+        };
         await tenantRepo.CreateTenantAsync(newTenant);
+        await directoryRepo.CreateDirectoryAsync(newRootDirectory);
         await userRepo.CreateUserAsync(newUser);
         await transaction.CommitAsync();
         return Results.Ok(new
@@ -126,6 +137,7 @@ using (var scope = app.Services.CreateScope())
 app.UseCmsLiteAuthentication();
 app.MapAuthenticationEndpoints();
 app.MapContentEndpoints();
+app.MapDirectoryEndpoints();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
