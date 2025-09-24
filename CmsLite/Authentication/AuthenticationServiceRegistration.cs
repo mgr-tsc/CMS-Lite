@@ -1,8 +1,8 @@
 using CmsLite.Database.Repositories;
-using CmsLite.Middlewares;
 
 namespace CmsLite.Authentication;
 
+//TODO: Move this class and code to a separate folder where all the service registrations are done
 public static class AuthenticationServiceRegistration
 {
     /// <summary>

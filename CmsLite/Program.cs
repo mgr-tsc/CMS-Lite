@@ -66,6 +66,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+builder.Services.AddCors();
 var app = builder.Build();
 
 // Health endpoint
@@ -178,9 +179,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure Swagger middleware
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Local")
 {
     app.UseSwagger();
+    app.UseCors(policy =>
+        policy.WithOrigins("http://localhost:5174") // Adjust the origin as needed
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "CMS-Lite API v1");
