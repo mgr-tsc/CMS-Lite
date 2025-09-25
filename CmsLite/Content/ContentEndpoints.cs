@@ -332,5 +332,40 @@ public static class ContentEndpoints
         .WithName("GetContentVersions")
         .WithSummary("List content versions")
         .WithDescription("Get all versions of a specific content resource");
+
+        // GET /v1/{tenant}/{resource}/details - Get detailed content information
+        contentGroup.MapGet("/{tenant}/{resource}/details", async (
+            string tenant,
+            string resource,
+            CmsLiteDbContext db,
+            IContentItemRepo contentItemRepo) =>
+        {
+            (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
+
+            // Get the actual tenant ID from the tenant name
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
+
+            try
+            {
+                var contentDetails = await contentItemRepo.GetContentItemDetailsAsync(tenantId, resource);
+
+                if (contentDetails == null)
+                {
+                    return Results.NotFound($"Content resource '{resource}' not found in tenant '{tenant}'");
+                }
+
+                return Results.Ok(contentDetails);
+            }
+            catch (Exception ex)
+            {
+                // TODO: Implement proper logging
+                Console.WriteLine($"Error getting content details: {ex.Message}");
+                return Results.Problem("An error occurred while retrieving content details");
+            }
+        }).RequireAuthorization()
+        .WithName("GetContentDetails")
+        .WithSummary("Get detailed content information")
+        .WithDescription("Returns comprehensive details about a specific content resource including version history, directory info, and metadata");
     }
 }

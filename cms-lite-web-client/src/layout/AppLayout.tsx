@@ -1,5 +1,5 @@
 import type {CSSProperties, ReactNode} from 'react'
-import {useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 import {useDispatch, useSelector} from 'react-redux'
 import {makeStyles} from '@fluentui/react-components'
 import {Header} from './Header'
@@ -23,9 +23,10 @@ import {
     selectDirectoryTreeLastFetchedTenant,
     setCurrentDirectory,
     type DirectoryNode,
-    type ContentItemNode,
 } from '../store/slices/directoryTree'
 import {FileDetailsModal} from '../components/FileDetailsModal'
+import customAxios from '../utilities/custom-axios'
+import type {ContentItemDetails} from '../types/content'
 
 const useStyles = makeStyles({
     appContainer: {
@@ -84,6 +85,14 @@ interface AppLayoutProps {
     children?: ReactNode
 }
 
+interface FileDetailsState {
+    open: boolean
+    isLoading: boolean
+    error: string | null
+    data: ContentItemDetails | null
+    resourceId: string | null
+}
+
 export const AppLayout = ({children}: AppLayoutProps) => {
     const styles = useStyles()
     const dispatch = useDispatch<AppDispatch>()
@@ -100,19 +109,25 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         typeof window === 'undefined' ? false : window.innerWidth < BREAKPOINTS.TABLET,
     )
     const [selectedFiles, setSelectedFiles] = useState<string[]>([])
-    const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-    const [detailItem, setDetailItem] = useState<ContentItemNode | null>(null)
+    const [detailsState, setDetailsState] = useState<FileDetailsState>({
+        open: false,
+        isLoading: false,
+        error: null,
+        data: null,
+        resourceId: null,
+    })
 
     useEffect(() => {
-        if (!isAuthenticated || !user?.tenantId) {
+        const tenantName = user?.tenant?.name
+        if (!isAuthenticated || !tenantName) {
             return
         }
-        const alreadyFetchedForTenant = lastFetchedTenant === user.tenantName
+        const alreadyFetchedForTenant = lastFetchedTenant === tenantName
         if (alreadyFetchedForTenant || directoryLoading) {
             return
         }
-        void dispatch(fetchDirectoryTree(user.tenantName));
-    }, [dispatch, directoryLoading, isAuthenticated, lastFetchedTenant, user?.tenantName, user?.tenantId])
+        void dispatch(fetchDirectoryTree(tenantName));
+    }, [dispatch, directoryLoading, isAuthenticated, lastFetchedTenant, user?.tenant?.name])
 
     useEffect(() => {
         setSelectedFiles([])
@@ -179,20 +194,62 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         }
     }
 
+    const loadFileDetails = useCallback(async (tenantName: string, resourceId: string) => {
+        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
+        try {
+            const {data} = await customAxios.get<ContentItemDetails>(`/v1/${tenantName}/${encodeURIComponent(resourceId)}/details`)
+            setDetailsState(prev => ({...prev, isLoading: false, data}))
+        } catch (error) {
+            let message = 'Failed to load file details'
+            if (error instanceof Error) {
+                message = error.message
+            }
+            setDetailsState(prev => ({...prev, isLoading: false, error: message}))
+        }
+    }, [])
+
+    const effectiveDirectory = useMemo(() => currentDirectory ?? rootDirectory ?? null, [currentDirectory, rootDirectory])
+
     const handleSeeDetails = () => {
-        if (selectedFiles.length === 0) {
+        const tenantName = user?.tenant?.name
+        if (selectedFiles.length === 0 || !effectiveDirectory || !tenantName) {
             return
         }
 
         const fileId = selectedFiles[0]
-        const file = effectiveDirectory?.contentItems.find(item => item.id === fileId) ?? null
-        setDetailItem(file)
-        setIsDetailsOpen(true)
+        const file = effectiveDirectory.contentItems.find(item => item.id === fileId)
+        if (!file) {
+            return
+        }
+
+        setDetailsState({
+            open: true,
+            isLoading: true,
+            error: null,
+            data: null,
+            resourceId: file.resource,
+        })
+
+        void loadFileDetails(tenantName, file.resource)
+    }
+
+    const handleCloseDetails = () => {
+        setDetailsState(prev => ({...prev, open: false}))
+    }
+
+    const handleRetryDetails = () => {
+        const tenantName = user?.tenant?.name
+        if (!detailsState.resourceId || !tenantName) {
+            return
+        }
+        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
+        void loadFileDetails(tenantName, detailsState.resourceId)
     }
 
     const handleRefresh = () => {
-        if (user?.tenantName) {
-            void dispatch(fetchDirectoryTree(user.tenantName))
+        const tenantName = user?.tenant?.name
+        if (tenantName) {
+            void dispatch(fetchDirectoryTree(tenantName))
         }
     }
 
@@ -205,27 +262,6 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     const handleToggleNavMenu = () => {
         setIsNavMenuCollapsed(prev => !prev)
     }
-
-    const effectiveDirectory = useMemo(() => currentDirectory ?? rootDirectory ?? null, [currentDirectory, rootDirectory])
-
-    useEffect(() => {
-        if (!isDetailsOpen) {
-            setDetailItem(null)
-            return
-        }
-
-        if (!selectedFiles.length || !effectiveDirectory) {
-            setIsDetailsOpen(false)
-            return
-        }
-
-        const active = effectiveDirectory.contentItems.find(item => item.id === selectedFiles[0]) ?? null
-        if (!active) {
-            setIsDetailsOpen(false)
-        } else {
-            setDetailItem(active)
-        }
-    }, [isDetailsOpen, selectedFiles, effectiveDirectory])
 
     return (
         <div className={styles.appContainer}>
@@ -287,9 +323,13 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             <Footer/>
 
             <FileDetailsModal
-                open={isDetailsOpen}
-                item={detailItem}
-                onClose={() => setIsDetailsOpen(false)}
+                open={detailsState.open}
+                details={detailsState.data}
+                isLoading={detailsState.isLoading}
+                error={detailsState.error}
+                resourceId={detailsState.resourceId}
+                onClose={handleCloseDetails}
+                onRetry={detailsState.error ? handleRetryDetails : undefined}
             />
         </div>
     )
