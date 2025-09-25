@@ -1,5 +1,6 @@
 using System;
 using Microsoft.EntityFrameworkCore;
+using CmsLite.Helpers.RequestMappers;
 
 namespace CmsLite.Database.Repositories;
 
@@ -148,5 +149,83 @@ public class DirectoryRepo : IDirectoryRepo
         await dbContext.DirectoriesTable.AddAsync(rootDirectory);
         await dbContext.SaveChangesAsync();
         return rootDirectory;
+    }
+
+    public async Task<DirectoryTreeResponse> GetFullDirectoryTreeAsync(string tenantId, string tenantName)
+    {
+        // Get all directories for the tenant with their content items
+        var directories = await GetDirectoryTreeAsync(tenantId);
+
+        // Find the root directory
+        var rootDirectory = directories.FirstOrDefault(d => d.ParentId == null);
+        if (rootDirectory == null)
+        {
+            // Create default response if no root directory exists
+            return new DirectoryTreeResponse
+            {
+                TenantId = tenantId,
+                TenantName = tenantName,
+                RootDirectory = new DirectoryNode
+                {
+                    Id = string.Empty,
+                    Name = "Root",
+                    Level = 0,
+                    SubDirectories = new List<DirectoryNode>(),
+                    ContentItems = new List<ContentItemSummary>()
+                },
+                TotalDirectories = 0,
+                TotalContentItems = 0
+            };
+        }
+
+        // Build the hierarchical tree structure
+        var rootNode = BuildDirectoryNode(rootDirectory, directories);
+
+        // Calculate totals
+        var totalDirectories = directories.Count;
+        var totalContentItems = directories.Sum(d => d.ContentItems.Count);
+
+        return new DirectoryTreeResponse
+        {
+            TenantId = tenantId,
+            TenantName = tenantName,
+            RootDirectory = rootNode,
+            TotalDirectories = totalDirectories,
+            TotalContentItems = totalContentItems
+        };
+    }
+
+    private DirectoryNode BuildDirectoryNode(DbSet.Directory directory, List<DbSet.Directory> allDirectories)
+    {
+        // Convert content items to summaries
+        var contentItemSummaries = directory.ContentItems
+            .Where(ci => !ci.IsDeleted)
+            .Select(ci => new ContentItemSummary
+            {
+                Resource = ci.Resource,
+                LatestVersion = ci.LatestVersion,
+                ContentType = ci.ContentType,
+                IsDeleted = ci.IsDeleted
+            }).ToList();
+
+        // Find child directories
+        var childDirectories = allDirectories
+            .Where(d => d.ParentId == directory.Id)
+            .OrderBy(d => d.Name)
+            .ToList();
+
+        // Recursively build child nodes
+        var childNodes = childDirectories
+            .Select(child => BuildDirectoryNode(child, allDirectories))
+            .ToList();
+
+        return new DirectoryNode
+        {
+            Id = directory.Id,
+            Name = directory.Name,
+            Level = directory.Level,
+            SubDirectories = childNodes,
+            ContentItems = contentItemSummaries
+        };
     }
 }

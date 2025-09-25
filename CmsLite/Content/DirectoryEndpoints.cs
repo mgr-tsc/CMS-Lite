@@ -12,6 +12,41 @@ public static class DirectoryEndpoints
     {
         var directoryGroup = app.MapGroup("/v1/{tenant}/directories").WithTags("Directory Management");
 
+        // GET /v1/{tenant}/directories/tree - Get full directory tree with content items
+        directoryGroup.MapGet("/tree", async (
+            string tenant,
+            CmsLiteDbContext db,
+            IDirectoryRepo directoryRepo,
+            ITenantRepo tenantRepo) =>
+        {
+            // Get tenant ID and validate
+            var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
+            if (!tenantSuccess) return tenantError!;
+
+            // Get tenant details for name
+            var tenantEntity = await tenantRepo.GetTenantByNameAsync(tenant);
+            if (tenantEntity == null)
+            {
+                return Results.NotFound($"Tenant '{tenant}' not found");
+            }
+
+            try
+            {
+                var directoryTree = await directoryRepo.GetFullDirectoryTreeAsync(tenantId, tenantEntity.Name);
+                return Results.Ok(directoryTree);
+            }
+            catch (Exception ex)
+            {
+                // TODO: Implement proper logging
+                Console.WriteLine($"Error getting directory tree: {ex.Message}");
+                return Results.Problem("An error occurred while retrieving the directory tree");
+            }
+        })
+        .RequireAuthorization()
+        .WithName("GetFullDirectoryTree")
+        .WithSummary("Get complete directory tree with content items")
+        .WithDescription("Returns the complete hierarchical directory structure with all content items for the tenant");
+
         // GET /v1/{tenant}/directories - List directory tree for tenant
         directoryGroup.MapGet("", async (
             string tenant,

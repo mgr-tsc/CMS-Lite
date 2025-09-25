@@ -1,6 +1,8 @@
 import { makeStyles, tokens, Text } from '@fluentui/react-components'
+import { LoadingSpinner } from '../components'
 import { FileListView } from './FileListView'
 import { BREAKPOINTS, MAIN_CONTENT } from './layoutConstants'
+import type { DirectoryNode } from '../types/directories.ts'
 
 const useStyles = makeStyles({
   contentContainer: {
@@ -27,31 +29,36 @@ const useStyles = makeStyles({
   },
 })
 
-interface FileItem {
-  id: string
-  name: string
-  type: 'file'
-  version: string
-  size: string
-  lastModified: string
-}
-
-interface NavItem {
-  id: string
-  name: string
-  type: 'folder'
-  children?: NavItem[]
-  files?: FileItem[]
-}
-
 interface ContentAreaProps {
-  selectedItem: NavItem | null
+  selectedItem: DirectoryNode | null
   selectedFiles: string[]
   onFileSelect: (fileIds: string[]) => void
+  isLoading: boolean
+  error: string | null
 }
 
-export const ContentArea = ({ selectedItem, selectedFiles, onFileSelect }: ContentAreaProps) => {
+export const ContentArea = ({ selectedItem, selectedFiles, onFileSelect, isLoading, error }: ContentAreaProps) => {
   const styles = useStyles()
+
+  if (isLoading) {
+    return (
+      <div className={styles.contentContainer}>
+        <LoadingSpinner message="Loading directories..." />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className={styles.contentContainer}>
+        <div className={styles.emptyState}>
+          <Text size={400} style={{ color: tokens.colorPaletteRedForeground1 }}>
+            {error}
+          </Text>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.contentContainer}>

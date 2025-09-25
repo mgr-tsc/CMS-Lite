@@ -58,7 +58,7 @@ const useStyles = makeStyles({
     height: '200px',
     color: tokens.colorNeutralForeground3,
   },
-})
+});
 
 interface FileItem {
   id: string
@@ -82,15 +82,15 @@ interface MainLayoutProps {
 }
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
-  const styles = useStyles()
-  const [selectedItem, setSelectedItem] = useState<NavItem | null>(null)
-  const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(false)
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+  const styles = useStyles();
+  const [selectedItem, setSelectedItem] = useState<NavItem | null>(null);
+  const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(false);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
-  const handleItemSelect = (item: NavItem) => {
-    setSelectedItem(item)
-    setSelectedFiles([]) // Clear file selection when switching directories
-  }
+  // const handleItemSelect = (item: NavItem) => {
+  //   setSelectedItem(item)
+  //   setSelectedFiles([]) // Clear file selection when switching directories
+  // }
 
   const handleFileSelect = (fileIds: string[]) => {
     setSelectedFiles(fileIds)
@@ -156,7 +156,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
 
         <NavMenu
-          onItemSelect={handleItemSelect}
+          //onItemSelect={handleItemSelect}
           selectedItemId={selectedItem?.id}
           isCollapsed={isNavMenuCollapsed}
         />

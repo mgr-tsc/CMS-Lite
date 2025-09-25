@@ -56,6 +56,7 @@ public static class AuthenticationEndpoints
                         Tenant = new TenantInfo
                         {
                             Id = user.TenantId,
+                            Name = user.Tenant.Name
                         }
                     }
                 };
