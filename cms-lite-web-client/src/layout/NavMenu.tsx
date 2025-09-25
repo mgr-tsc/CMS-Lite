@@ -140,7 +140,7 @@ export const NavMenu = ({
   }, [initialExpanded])
 
   const handleItemClick = (item: DirectoryNode) => {
-    const canToggle = item.subDirectories.length > 0 && item.parentId !== null
+    const canToggle = item.subDirectories.length > 0
     if (canToggle) {
       setExpandedItems(prev => {
         const next = new Set(prev)
