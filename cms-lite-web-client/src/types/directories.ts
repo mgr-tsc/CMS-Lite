@@ -4,6 +4,9 @@ export interface ContentItemNode {
     latestVersion: number
     contentType: string
     isDeleted: boolean
+    byteSize?: number
+    createdAtUtc?: string
+    updatedAtUtc?: string
 }
 
 export interface DirectoryNode {
@@ -20,6 +23,9 @@ export interface ApiContentItem {
     latestVersion: number
     contentType: string
     isDeleted: boolean
+    byteSize?: number
+    createdAtUtc?: string
+    updatedAtUtc?: string
 }
 
 export interface ApiDirectoryNode {

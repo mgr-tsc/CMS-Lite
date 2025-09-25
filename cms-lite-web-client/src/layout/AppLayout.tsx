@@ -22,8 +22,10 @@ import {
     selectDirectoryTreeCurrentDirectory,
     selectDirectoryTreeLastFetchedTenant,
     setCurrentDirectory,
+    type DirectoryNode,
+    type ContentItemNode,
 } from '../store/slices/directoryTree'
-import type {DirectoryNode} from '../store/slices/directoryTree'
+import {FileDetailsModal} from '../components/FileDetailsModal'
 
 const useStyles = makeStyles({
     appContainer: {
@@ -98,17 +100,19 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         typeof window === 'undefined' ? false : window.innerWidth < BREAKPOINTS.TABLET,
     )
     const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+    const [detailItem, setDetailItem] = useState<ContentItemNode | null>(null)
 
     useEffect(() => {
-        if (!isAuthenticated || !user?.tenant?.id) {
+        if (!isAuthenticated || !user?.tenantId) {
             return
         }
-        const alreadyFetchedForTenant = lastFetchedTenant === user.tenant.name
+        const alreadyFetchedForTenant = lastFetchedTenant === user.tenantName
         if (alreadyFetchedForTenant || directoryLoading) {
             return
         }
-        void dispatch(fetchDirectoryTree(user.tenant.name));
-    }, [dispatch, directoryLoading, isAuthenticated, lastFetchedTenant, user?.tenant?.name, user?.tenant?.id])
+        void dispatch(fetchDirectoryTree(user.tenantName));
+    }, [dispatch, directoryLoading, isAuthenticated, lastFetchedTenant, user?.tenantName, user?.tenantId])
 
     useEffect(() => {
         setSelectedFiles([])
@@ -176,14 +180,19 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     }
 
     const handleSeeDetails = () => {
-        if (selectedFiles.length > 0) {
-            console.log('Showing details for:', selectedFiles)
+        if (selectedFiles.length === 0) {
+            return
         }
+
+        const fileId = selectedFiles[0]
+        const file = effectiveDirectory?.contentItems.find(item => item.id === fileId) ?? null
+        setDetailItem(file)
+        setIsDetailsOpen(true)
     }
 
     const handleRefresh = () => {
-        if (user?.tenant?.name) {
-            void dispatch(fetchDirectoryTree(user.tenant.name))
+        if (user?.tenantName) {
+            void dispatch(fetchDirectoryTree(user.tenantName))
         }
     }
 
@@ -198,6 +207,25 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     }
 
     const effectiveDirectory = useMemo(() => currentDirectory ?? rootDirectory ?? null, [currentDirectory, rootDirectory])
+
+    useEffect(() => {
+        if (!isDetailsOpen) {
+            setDetailItem(null)
+            return
+        }
+
+        if (!selectedFiles.length || !effectiveDirectory) {
+            setIsDetailsOpen(false)
+            return
+        }
+
+        const active = effectiveDirectory.contentItems.find(item => item.id === selectedFiles[0]) ?? null
+        if (!active) {
+            setIsDetailsOpen(false)
+        } else {
+            setDetailItem(active)
+        }
+    }, [isDetailsOpen, selectedFiles, effectiveDirectory])
 
     return (
         <div className={styles.appContainer}>
@@ -257,6 +285,12 @@ export const AppLayout = ({children}: AppLayoutProps) => {
 
             {/* Footer spans full width */}
             <Footer/>
+
+            <FileDetailsModal
+                open={isDetailsOpen}
+                item={detailItem}
+                onClose={() => setIsDetailsOpen(false)}
+            />
         </div>
     )
 }
