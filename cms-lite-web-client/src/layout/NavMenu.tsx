@@ -140,15 +140,18 @@ export const NavMenu = ({
   }, [initialExpanded])
 
   const handleItemClick = (item: DirectoryNode) => {
-    setExpandedItems(prev => {
-      const next = new Set(prev)
-      if (next.has(item.id)) {
-        next.delete(item.id)
-      } else {
-        next.add(item.id)
-      }
-      return next
-    })
+    const canToggle = item.subDirectories.length > 0 && item.parentId !== null
+    if (canToggle) {
+      setExpandedItems(prev => {
+        const next = new Set(prev)
+        if (next.has(item.id)) {
+          next.delete(item.id)
+        } else {
+          next.add(item.id)
+        }
+        return next
+      })
+    }
     onItemSelect?.(item)
     if (isOverlay) {
       onDismissOverlay?.()
@@ -159,6 +162,7 @@ export const NavMenu = ({
     const isExpanded = expandedItems.has(item.id) && !isCollapsed
     const hasChildren = item.subDirectories.length > 0
     const isSelected = selectedItemId === item.id
+    const displayName = item.parentId === null ? 'Root Directory' : item.name
     return (
       <div key={item.id}>
         <button
@@ -169,17 +173,21 @@ export const NavMenu = ({
             justifyContent: isCollapsed ? 'center' : 'flex-start',
             alignItems: 'center',
           }}
-          title={isCollapsed ? item.name : undefined}
+          title={isCollapsed ? displayName : undefined}
         >
           <div className={styles.itemContent}>
             {!isCollapsed && hasChildren && (isExpanded ? <ChevronDownRegular /> : <ChevronRightRegular />)}
             {isExpanded ? <FolderOpenRegular /> : <FolderRegular />}
-            {!isCollapsed && <Text size={300}>{item.name}</Text>}
+            {!isCollapsed && (
+              <Text size={300}>
+                {displayName}
+              </Text>
+            )}
           </div>
         </button>
 
         {hasChildren && isExpanded && !isCollapsed && (
-          <div>
+          <div className={styles.childrenContainer}>
             {item.subDirectories.map(child => renderTreeItem(child, level + 1))}
           </div>
         )}
@@ -196,12 +204,7 @@ export const NavMenu = ({
     .join(' ')
 
   const topLevelItems = useMemo(() => {
-    if (!root) {
-      return []
-    }
-
-    const isSyntheticRoot = root.subDirectories.length > 0 && root.name.toLowerCase() === 'root'
-    return isSyntheticRoot ? root.subDirectories : [root]
+    return root ? [root] : []
   }, [root])
 
   return (

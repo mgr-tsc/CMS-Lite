@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { makeStyles, tokens, Text } from '@fluentui/react-components'
 import { Header } from './Header'
 import { Footer } from './Footer'
@@ -9,88 +9,84 @@ import { FileListView } from './FileListView'
 import {
   MAIN_CONTENT,
   ANIMATIONS,
-  getMainContentMarginLeft
+  getMainContentMarginLeft,
 } from './layoutConstants'
+import type { DirectoryNode } from '../store/slices/directoryTree'
 
 const useStyles = makeStyles({
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100vh',
-    backgroundColor: tokens.colorNeutralBackground1,
-    overflowX: 'hidden', // Prevent horizontal scrolling
-    width: '100vw',
-  },
-  content: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  workspaceContainer: {
-    flex: 1,
-    display: 'flex',
-    minHeight: 0,
-    overflowX: 'hidden', // Prevent horizontal overflow
-  },
-  mainContent: {
-    flex: 1,
-    padding: `${MAIN_CONTENT.PADDING}px`,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
-    margin: '0 auto',
-    width: '100%',
-    overflow: 'auto',
-    transition: ANIMATIONS.CONTENT_TRANSITION,
-    boxSizing: 'border-box',
-  },
-  contentArea: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: tokens.borderRadiusLarge,
-    padding: tokens.spacingVerticalL,
-    minHeight: '400px',
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-  },
-  emptyState: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '200px',
-    color: tokens.colorNeutralForeground3,
-  },
-});
-
-interface FileItem {
-  id: string
-  name: string
-  type: 'file'
-  version: string
-  size: string
-  lastModified: string
-}
-
-interface NavItem {
-  id: string
-  name: string
-  type: 'folder'
-  children?: NavItem[]
-  files?: FileItem[]
-}
+    container: {
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        backgroundColor: tokens.colorNeutralBackground1,
+        overflowX: 'hidden', // Prevent horizontal scrolling
+        width: '100vw',
+    },
+    content: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+    },
+    workspaceContainer: {
+        flex: 1,
+        display: 'flex',
+        minHeight: 0,
+        overflowX: 'hidden', // Prevent horizontal overflow
+    },
+    mainContent: {
+        flex: 1,
+        padding: `${MAIN_CONTENT.PADDING}px`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: tokens.spacingVerticalL,
+        margin: '0 auto',
+        width: '100%',
+        overflow: 'auto',
+        transition: ANIMATIONS.CONTENT_TRANSITION,
+        boxSizing: 'border-box',
+    },
+    contentArea: {
+        backgroundColor: tokens.colorNeutralBackground1,
+        borderRadius: tokens.borderRadiusLarge,
+        padding: tokens.spacingVerticalL,
+        minHeight: '400px',
+        border: `1px solid ${tokens.colorNeutralStroke1}`,
+    },
+    emptyState: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '200px',
+        color: tokens.colorNeutralForeground3,
+    },
+})
 
 interface MainLayoutProps {
-  children?: ReactNode
+    children?: ReactNode
 }
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
-  const styles = useStyles();
-  const [selectedItem, setSelectedItem] = useState<NavItem | null>(null);
-  const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(false);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const styles = useStyles()
+  const [selectedItem, setSelectedItem] = useState<DirectoryNode | null>(null)
+  const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(false)
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([])
 
-  // const handleItemSelect = (item: NavItem) => {
-  //   setSelectedItem(item)
-  //   setSelectedFiles([]) // Clear file selection when switching directories
-  // }
+  const placeholderRoot: DirectoryNode = useMemo(
+    () => ({
+      id: 'placeholder-root',
+      name: 'Root Directory',
+      level: 0,
+      parentId: null,
+      subDirectories: [],
+      contentItems: [],
+    }),
+    [],
+  )
+
+  const handleItemSelect = (item: DirectoryNode) => {
+    setSelectedItem(item)
+    setSelectedFiles([])
+  }
 
   const handleFileSelect = (fileIds: string[]) => {
     setSelectedFiles(fileIds)
@@ -128,7 +124,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   }
 
   const handleToggleNavMenu = () => {
-    setIsNavMenuCollapsed(!isNavMenuCollapsed)
+    setIsNavMenuCollapsed((prev) => !prev)
   }
 
   return (
@@ -156,8 +152,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
 
         <NavMenu
-          //onItemSelect={handleItemSelect}
-          selectedItemId={selectedItem?.id}
+          root={placeholderRoot}
+          onItemSelect={handleItemSelect}
+          selectedItemId={selectedItem?.id ?? null}
           isCollapsed={isNavMenuCollapsed}
         />
 
