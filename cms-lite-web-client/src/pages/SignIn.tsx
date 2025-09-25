@@ -14,9 +14,8 @@ import {
   MessageBar,
 } from '@fluentui/react-components'
 import { PersonRegular, LockClosedRegular } from '@fluentui/react-icons'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { BREAKPOINTS } from '../layout/layoutConstants'
-
 const useStyles = makeStyles({
   container: {
     display: 'flex',
@@ -87,12 +86,10 @@ export const SignIn = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-
     if (!email || !password) {
       setError('Please fill in all fields')
       return
     }
-
     const success = await login(email, password)
     if (!success) {
       setError('Invalid email or password')
@@ -151,7 +148,7 @@ export const SignIn = () => {
             <div className={styles.credentialsHint}>
               <Body1><strong>Demo Credentials:</strong></Body1>
               <Caption1>Email: admin@email.com</Caption1>
-              <Caption1>Password: abc</Caption1>
+              <Caption1>Password: biggerThan_6_chars</Caption1>
             </div>
           </form>
         </CardPreview>

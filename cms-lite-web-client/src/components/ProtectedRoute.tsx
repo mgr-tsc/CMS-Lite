@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts'
 import { makeStyles, tokens, Text } from '@fluentui/react-components'
 
 const useStyles = makeStyles({
@@ -30,7 +30,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />
+    return <Navigate to="/login" replace />
   }
 
   return <>{children}</>

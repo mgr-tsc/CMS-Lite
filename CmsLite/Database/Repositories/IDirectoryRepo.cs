@@ -1,4 +1,5 @@
 using System;
+using CmsLite.Helpers.RequestMappers;
 
 namespace CmsLite.Database.Repositories;
 
@@ -12,4 +13,5 @@ public interface IDirectoryRepo
     Task<bool> CanCreateSubdirectoryAsync(string parentId);
     Task<bool> IsRootDirectoryAsync(string directoryId);
     Task<DbSet.Directory> GetOrCreateRootDirectoryAsync(string tenantId);
+    Task<DirectoryTreeResponse> GetFullDirectoryTreeAsync(string tenantId, string tenantName);
 }

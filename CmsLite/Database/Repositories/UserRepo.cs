@@ -14,12 +14,12 @@ public class UserRepo : IUserRepo
 
     public async Task<DbSet.User?> GetUserByIdAsync(string userId)
     {
-        return await dbContext.UsersTable.FindAsync(userId);
+        return await dbContext.UsersTable.Include(u => u.Tenant).FirstOrDefaultAsync(u => u.Id == userId);
     }
 
     public async Task<DbSet.User?> GetUserByEmailAsync(string email)
     {
-        return await dbContext.UsersTable.FirstOrDefaultAsync(u => u.Email == email);
+        return await dbContext.UsersTable.Include(u => u.Tenant).FirstOrDefaultAsync(u => u.Email == email);
     }
 
     public async Task CreateUserAsync(DbSet.User user)

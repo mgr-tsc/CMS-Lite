@@ -55,6 +55,7 @@ nunit-*.xml
 
 WARP.md
 CLAUDE.md
+CODEX.md
 *.http
 .vscode/
 data/
@@ -67,6 +68,7 @@ cms-lite-web-client/build/
 # Environment variables and secrets
 prod.env
 dev.env
+.env.local
 __azurite*.json
 __blobstorage__/
 

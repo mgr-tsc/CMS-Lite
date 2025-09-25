@@ -2,6 +2,7 @@ using System.Security.Claims;
 
 namespace CmsLite.Middlewares;
 
+//TODO: Improve tenant resolution and validation logic to be robust and safe
 public class TenantValidationMiddleware
 {
     private readonly RequestDelegate _next;

@@ -6,6 +6,7 @@ using CmsLite.Authentication;
 using CmsLite.Content;
 using CmsLite.Helpers.RequestMappers;
 using Microsoft.OpenApi.Models;
+using CmsLite.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +67,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+builder.Services.AddCors();
 var app = builder.Build();
 
 // Health endpoint
@@ -178,9 +180,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure Swagger middleware
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Local")
 {
     app.UseSwagger();
+    app.UseCors(policy =>
+        policy.WithOrigins("http://localhost:5174", "http://localhost:9090", "http://host.docker.internal:9090") // Adjust the origin as needed
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "CMS-Lite API v1");
