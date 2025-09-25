@@ -99,7 +99,7 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
         <div className={styles.userSection}>
           <div className={styles.userDetails}>
             <Text size={300}>
-              Welcome, admin
+              Welcome, {user.firstName || user.lastName ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : user.email}
             </Text>
             <Caption1>
               {user.email}
