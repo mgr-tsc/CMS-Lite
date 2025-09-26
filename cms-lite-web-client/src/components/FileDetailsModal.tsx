@@ -61,24 +61,11 @@ const useStyles = makeStyles({
   },
 })
 
-const formatSize = (bytes?: number, readableSize?: string): string => {
+const formatSize = (_bytes?: number, readableSize?: string): string => {
   if (readableSize && readableSize.trim().length > 0) {
     return readableSize
   }
-
-  if (bytes === undefined || bytes === null || Number.isNaN(bytes)) {
-    return 'Unknown'
-  }
-
-  if (bytes === 0) {
-    return '0 B'
-  }
-
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  const value = bytes / Math.pow(k, i)
-  return `${value.toFixed(value < 10 && i > 0 ? 1 : 0)} ${sizes[i]}`
+  return 'Unknown'
 }
 
 const formatDate = (isoDate?: string): string => {
