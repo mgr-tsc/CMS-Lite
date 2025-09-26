@@ -81,7 +81,7 @@ public class ContentItemRepo : IContentItemRepo
             Resource = contentItem.Resource,
             LatestVersion = contentItem.LatestVersion,
             ContentType = contentItem.ContentType,
-            ByteSize = contentItem.ByteSize,
+            Size = Helpers.Utilities.CalculateFileSizeInBestUnit(contentItem.ByteSize),
             CreatedAtUtc = contentItem.CreatedAtUtc,
             UpdatedAtUtc = contentItem.UpdatedAtUtc,
             IsDeleted = contentItem.IsDeleted,
@@ -97,7 +97,7 @@ public class ContentItemRepo : IContentItemRepo
             Versions = versions.Select(v => new VersionSummary
             {
                 Version = v.Version,
-                ByteSize = v.ByteSize,
+                Size = Helpers.Utilities.CalculateFileSizeInBestUnit(v.ByteSize),
                 CreatedAtUtc = v.CreatedAtUtc
             }).ToList(),
 

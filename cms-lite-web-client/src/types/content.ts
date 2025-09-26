@@ -25,7 +25,7 @@ export interface ContentItemDetails {
   resource: string
   latestVersion: number
   contentType: string
-  byteSize: number
+  size?: string
   eTag: string
   sha256: string
   createdAtUtc: string
