@@ -44,8 +44,6 @@ public class ContentDetailsApiTests : IAsyncDisposable
         Assert.Equal(1, details.LatestVersion);
         Assert.Equal("application/json", details.ContentType);
         Assert.True(details.ByteSize > 0);
-        Assert.False(string.IsNullOrEmpty(details.ETag));
-        Assert.False(string.IsNullOrEmpty(details.Sha256));
         Assert.False(details.IsDeleted);
 
         // Check directory information

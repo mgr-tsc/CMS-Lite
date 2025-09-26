@@ -38,6 +38,11 @@ const useStyles = makeStyles({
   sectionTitle: {
     marginTop: tokens.spacingVerticalS,
   },
+  twoColumn: {
+    display: 'grid',
+    gap: tokens.spacingVerticalM,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+  },
   versionsList: {
     display: 'grid',
     gap: tokens.spacingVerticalXS,
@@ -57,7 +62,7 @@ const useStyles = makeStyles({
 })
 
 const formatSize = (bytes?: number, readableSize?: string): string => {
-  if (readableSize) {
+  if (readableSize && readableSize.trim().length > 0) {
     return readableSize
   }
 
@@ -94,11 +99,16 @@ export const FileDetailsModal = ({ open, details, isLoading, error, resourceId, 
 
   const name = details?.resource ?? resourceId ?? 'Unknown'
   const size = formatSize(details?.byteSize, details?.metadata?.readableSize)
-  const type = details?.metadata?.fileExtension ?? details?.contentType ?? 'Unknown'
-  const version = details?.latestVersion ?? 'Unknown'
+  const extension = details?.metadata?.fileExtension
+  const type = extension && extension.trim().length > 0 ? extension : details?.contentType ?? 'Unknown'
+  const version = details ? `v${details.latestVersion}` : 'Unknown'
   const createdAt = formatDate(details?.createdAtUtc)
-
+  const updatedAt = formatDate(details?.updatedAtUtc)
+  const status = details?.isDeleted ? 'Deleted' : 'Active'
   const directory = details?.directory
+  const totalVersions = details?.metadata?.totalVersions ?? details?.versions?.length ?? 0
+  const versions = details?.versions ?? []
+  const showVersions = versions.length > 0
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) onClose() }}>
@@ -114,46 +124,65 @@ export const FileDetailsModal = ({ open, details, isLoading, error, resourceId, 
               </div>
             ) : details ? (
               <div className={styles.grid}>
-                <div className={styles.row}>
-                  <span className={styles.label}>Name</span>
-                  <Text weight="semibold">{name}</Text>
+                <div className={styles.twoColumn}>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Name</span>
+                    <Text weight="semibold">{name}</Text>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Type</span>
+                    <Text>{type}</Text>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Size</span>
+                    <Text>{size}</Text>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Latest Version</span>
+                    <Text>{version}</Text>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Created At</span>
+                    <Text>{createdAt}</Text>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Updated At</span>
+                    <Text>{updatedAt}</Text>
+                  </div>
                 </div>
-                <div className={styles.row}>
-                  <span className={styles.label}>Type</span>
-                  <Text>{type}</Text>
-                </div>
-                <div className={styles.row}>
-                  <span className={styles.label}>Size</span>
-                  <Text>{size}</Text>
-                </div>
-                <div className={styles.row}>
-                  <span className={styles.label}>Latest Version</span>
-                  <Text>{version}</Text>
-                </div>
-                <div className={styles.row}>
-                  <span className={styles.label}>Created At</span>
-                  <Text>{createdAt}</Text>
-                </div>
-                <div className={styles.row}>
-                  <span className={styles.label}>Status</span>
-                  <Text>{details.isDeleted ? 'Deleted' : 'Active'}</Text>
+
+                <div className={styles.twoColumn}>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Status</span>
+                    <Text>{status}</Text>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.label}>Total Versions</span>
+                    <Text>{totalVersions}</Text>
+                  </div>
                 </div>
 
                 {directory && (
-                  <div className={styles.row}>
-                    <span className={styles.label}>Directory</span>
-                    <Text>{directory.fullPath || directory.name}</Text>
+                  <div className={styles.twoColumn}>
+                    <div className={styles.row}>
+                      <span className={styles.label}>Directory</span>
+                      <Text>{directory.fullPath || directory.name}</Text>
+                    </div>
+                    <div className={styles.row}>
+                      <span className={styles.label}>Directory Level</span>
+                      <Text>{directory.level}</Text>
+                    </div>
                   </div>
                 )}
 
-                {details.metadata?.hasMultipleVersions && details.versions?.length > 0 && (
+                {showVersions && (
                   <div>
-                    <Text weight="semibold" className={styles.sectionTitle}>Versions</Text>
+                    <Text weight="semibold" className={styles.sectionTitle}>Version History</Text>
                     <div className={styles.versionsList}>
-                      {details.versions.map((versionInfo) => (
+                      {versions.map((versionInfo) => (
                         <div key={versionInfo.version} className={styles.versionRow}>
                           <span>v{versionInfo.version}</span>
-                          <span>{formatSize(versionInfo.byteSize)} • {formatDate(versionInfo.createdAtUtc)}</span>
+                          <span>{`${formatSize(versionInfo.byteSize)} • ${formatDate(versionInfo.createdAtUtc)}`}</span>
                         </div>
                       ))}
                     </div>

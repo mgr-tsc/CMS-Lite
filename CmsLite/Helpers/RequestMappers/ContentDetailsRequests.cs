@@ -8,8 +8,6 @@ public record ContentDetailsResponse
     public int LatestVersion { get; init; }
     public string ContentType { get; init; } = string.Empty;
     public long ByteSize { get; init; }
-    public string ETag { get; init; } = string.Empty;
-    public string Sha256 { get; init; } = string.Empty;
     public DateTime CreatedAtUtc { get; init; }
     public DateTime UpdatedAtUtc { get; init; }
     public bool IsDeleted { get; init; }
@@ -36,7 +34,6 @@ public record VersionSummary
 {
     public int Version { get; init; }
     public long ByteSize { get; init; }
-    public string ETag { get; init; } = string.Empty;
     public DateTime CreatedAtUtc { get; init; }
 }
 

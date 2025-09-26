@@ -82,8 +82,6 @@ public class ContentItemRepo : IContentItemRepo
             LatestVersion = contentItem.LatestVersion,
             ContentType = contentItem.ContentType,
             ByteSize = contentItem.ByteSize,
-            ETag = contentItem.ETag,
-            Sha256 = contentItem.Sha256,
             CreatedAtUtc = contentItem.CreatedAtUtc,
             UpdatedAtUtc = contentItem.UpdatedAtUtc,
             IsDeleted = contentItem.IsDeleted,
@@ -100,7 +98,6 @@ public class ContentItemRepo : IContentItemRepo
             {
                 Version = v.Version,
                 ByteSize = v.ByteSize,
-                ETag = v.ETag,
                 CreatedAtUtc = v.CreatedAtUtc
             }).ToList(),
 
