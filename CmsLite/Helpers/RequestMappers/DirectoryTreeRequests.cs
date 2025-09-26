@@ -32,4 +32,5 @@ public record ContentItemSummary
     public int LatestVersion { get; init; }
     public string ContentType { get; init; } = string.Empty;
     public bool IsDeleted { get; init; }
+    public string Size { get; init; } = string.Empty;
 }

@@ -29,7 +29,7 @@ const mapContentItems = (items: ApiContentItem[], directoryId: string): ContentI
     latestVersion: item.latestVersion,
     contentType: item.contentType,
     isDeleted: item.isDeleted,
-    byteSize: item.byteSize,
+    size: item.size,
     createdAtUtc: item.createdAtUtc,
     updatedAtUtc: item.updatedAtUtc,
   }))

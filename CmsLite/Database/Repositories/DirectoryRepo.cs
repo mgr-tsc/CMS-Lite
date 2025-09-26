@@ -205,7 +205,8 @@ public class DirectoryRepo : IDirectoryRepo
                 Resource = ci.Resource,
                 LatestVersion = ci.LatestVersion,
                 ContentType = ci.ContentType,
-                IsDeleted = ci.IsDeleted
+                IsDeleted = ci.IsDeleted,
+                Size = Helpers.Utilities.CalculateFileSizeInBestUnit(ci.ByteSize)
             }).ToList();
 
         // Find child directories

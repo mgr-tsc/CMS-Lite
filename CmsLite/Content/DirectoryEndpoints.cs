@@ -250,7 +250,7 @@ public static class DirectoryEndpoints
                     ci.Resource,
                     ci.LatestVersion,
                     ci.ContentType,
-                    ci.ByteSize,
+                    size = Helpers.Utilities.CalculateFileSizeInBestUnit(ci.ByteSize),
                     ci.ETag,
                     ci.UpdatedAtUtc,
                     ci.CreatedAtUtc

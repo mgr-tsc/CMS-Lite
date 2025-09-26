@@ -10,12 +10,9 @@ import {
   tokens,
   Checkbox,
 } from '@fluentui/react-components';
-import {
-  DocumentRegular,
-  FolderRegular,
-} from '@fluentui/react-icons'
+import { DocumentRegular, FolderRegular } from '@fluentui/react-icons'
 import { BREAKPOINTS } from './layoutConstants'
-import type { DirectoryNode, ContentItemNode } from '../store/slices/directoryTree'
+import type { DirectoryNode, ContentItemNode } from '../types/directories.ts'
 
 const useStyles = makeStyles({
   container: {
@@ -101,6 +98,10 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
   const isAllSelected = files.length > 0 && files.every(file => selectedFiles.includes(file.id))
   const isSomeSelected = files.some(file => selectedFiles.includes(file.id))
 
+  const renderSize = (file: ContentItemNode): string => {
+    return file.size || "N/A";
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -125,16 +126,16 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
                   />
                 </TableHeaderCell>
                 <TableHeaderCell>
-                  <Text weight="semibold">Resource</Text>
+                  <Text weight="semibold">File Name</Text>
                 </TableHeaderCell>
                 <TableHeaderCell>
-                  <Text weight="semibold">Content Type</Text>
+                  <Text weight="semibold">Type</Text>
                 </TableHeaderCell>
                 <TableHeaderCell>
                   <Text weight="semibold">Latest Version</Text>
                 </TableHeaderCell>
                 <TableHeaderCell>
-                  <Text weight="semibold">Status</Text>
+                  <Text weight="semibold">Size</Text>
                 </TableHeaderCell>
               </TableRow>
             </TableHeader>
@@ -160,13 +161,13 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Text>{file.contentType}</Text>
+                      <Text>{file.contentType || 'Unknown'}</Text>
                     </TableCell>
                     <TableCell>
                       <Text>{file.latestVersion}</Text>
                     </TableCell>
                     <TableCell>
-                      <Text>{file.isDeleted ? 'Deleted' : 'Active'}</Text>
+                      <Text>{renderSize(file)}</Text>
                     </TableCell>
                   </TableRow>
                 )

@@ -21,53 +21,53 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         //TODO: Clean all this mechanism to restore user state from localStorage and token validation
         // The logic should be handled by redux-persist or similar library
         // This is a temporary solution until then
-        const token = localStorage.getItem('jwtToken')
-        const savedUser = localStorage.getItem('cms-lite-user')
+        const token = localStorage.getItem('jwtToken');
+        const savedUser = localStorage.getItem('cms-lite-user');
 
         const isTokenExpired = (jwt: string): boolean => {
-            const parts = jwt.split('.')
+            const parts = jwt.split('.');
             if (parts.length < 2) {
-                return true
+                return true;
             }
 
             try {
-                let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+                let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
                 while (payload.length % 4 !== 0) {
-                    payload += '='
+                    payload += '=';
                 }
-                const decoded = JSON.parse(atob(payload)) as { exp?: number }
+                const decoded = JSON.parse(atob(payload)) as { exp?: number };
                 if (typeof decoded.exp !== 'number') {
-                    return true
+                    return true;
                 }
-                return decoded.exp * 1000 <= Date.now()
+                return decoded.exp * 1000 <= Date.now();
             } catch (error) {
-                console.error('Error decoding token:', error)
-                return true
+                console.error('Error decoding token:', error);
+                return true;
             }
         }
 
         if (!token || isTokenExpired(token)) {
             // Clean up expired or invalid tokens
-            localStorage.removeItem('cms-lite-user')
-            localStorage.removeItem('jwtToken')
-            dispatch(logOutUser())
-            dispatch(clearDirectoryTree())
-            setIsLoading(false)
-            return
+            localStorage.removeItem('cms-lite-user');
+            localStorage.removeItem('jwtToken');
+            dispatch(logOutUser());
+            dispatch(clearDirectoryTree());
+            setIsLoading(false);
+            return;
         }
 
         // Token is valid, restore user state
         if (savedUser) {
             try {
-                const userData = JSON.parse(savedUser)
-                dispatch(logInUser(userData))
+                const userData = JSON.parse(savedUser);
+                dispatch(logInUser(userData));
             } catch (error) {
-                console.error('Error parsing saved user:', error)
+                console.error('Error parsing saved user:', error);
                 // Clean up corrupted data
-                localStorage.removeItem('cms-lite-user')
-                localStorage.removeItem('jwtToken')
-                dispatch(logOutUser())
-                dispatch(clearDirectoryTree())
+                localStorage.removeItem('cms-lite-user');
+                localStorage.removeItem('jwtToken');
+                dispatch(logOutUser());
+                dispatch(clearDirectoryTree());
             }
         }
 
@@ -85,13 +85,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             localStorage.setItem('jwtToken', data.token);
             const { id, email: userEmail, firstName, lastName, tenant} = data.user
             dispatch(logInUser({
-                id,
-                email: userEmail,
-                firstName,
-                lastName,
-                tenant,
-            }));
-            localStorage.setItem('cms-lite-user', JSON.stringify({
                 id,
                 email: userEmail,
                 firstName,
