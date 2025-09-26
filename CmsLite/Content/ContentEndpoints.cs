@@ -120,7 +120,7 @@ public static class ContentEndpoints
                         CreatedAtUtc = DateTime.UtcNow
                     });
                     await db.SaveChangesAsync();
-                    return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}", new { tenant, resource, version = nextVersion, etag, sha256, size });
+                    return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}", new { tenant, resource, version = nextVersion, etag, sha256, size = Helpers.Utilities.CalculateFileSizeInBestUnit(size) });
                 }
                 catch (Exception)
                 {

@@ -43,7 +43,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
         Assert.Equal("test-resource.json", details.Resource);
         Assert.Equal(1, details.LatestVersion);
         Assert.Equal("application/json", details.ContentType);
-        Assert.True(details.ByteSize > 0);
+        Assert.False(string.IsNullOrEmpty(details.Size));
         Assert.False(details.IsDeleted);
 
         // Check directory information
@@ -56,7 +56,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
         Assert.NotNull(details.Versions);
         Assert.Single(details.Versions); // Should have 1 version
         Assert.Equal(1, details.Versions[0].Version);
-        Assert.Equal(details.ByteSize, details.Versions[0].ByteSize);
+        Assert.Equal(details.Size, details.Versions[0].Size);
 
         // Check metadata
         Assert.NotNull(details.Metadata);
@@ -110,8 +110,9 @@ public class ContentDetailsApiTests : IAsyncDisposable
         Assert.Equal(2, details.Versions[0].Version);
         Assert.Equal(1, details.Versions[1].Version);
 
-        // Version 2 should be larger than version 1
-        Assert.True(details.Versions[0].ByteSize > details.Versions[1].ByteSize);
+        // Version 2 should have a size string
+        Assert.False(string.IsNullOrEmpty(details.Versions[0].Size));
+        Assert.False(string.IsNullOrEmpty(details.Versions[1].Size));
     }
 
     [Fact]

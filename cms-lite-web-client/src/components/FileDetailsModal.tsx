@@ -1,4 +1,5 @@
 import { Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Button, Text, makeStyles, tokens, Spinner } from '@fluentui/react-components'
+import { formatFileDate } from '../utilities/file-formatters'
 import type { ContentItemDetails } from '../types/content'
 
 interface FileDetailsModalProps {
@@ -61,36 +62,16 @@ const useStyles = makeStyles({
   },
 })
 
-const formatSize = (_bytes?: number, readableSize?: string): string => {
-  if (readableSize && readableSize.trim().length > 0) {
-    return readableSize
-  }
-  return ''
-}
-
-const formatDate = (isoDate?: string): string => {
-  if (!isoDate) {
-    return 'Unknown'
-  }
-
-  const date = new Date(isoDate)
-  if (Number.isNaN(date.getTime())) {
-    return 'Unknown'
-  }
-
-  return date.toLocaleString()
-}
-
 export const FileDetailsModal = ({ open, details, isLoading, error, resourceId, onClose, onRetry }: FileDetailsModalProps) => {
   const styles = useStyles()
 
   const name = details?.resource ?? resourceId ?? 'Unknown'
-  const size = formatSize(details?.byteSize, details?.metadata?.readableSize)
+  const size = details?.size || "N/A";
   const extension = details?.metadata?.fileExtension
   const type = extension && extension.trim().length > 0 ? extension : details?.contentType ?? 'Unknown'
   const version = details ? `v${details.latestVersion}` : 'Unknown'
-  const createdAt = formatDate(details?.createdAtUtc)
-  const updatedAt = formatDate(details?.updatedAtUtc)
+  const createdAt = formatFileDate(details?.createdAtUtc)
+  const updatedAt = formatFileDate(details?.updatedAtUtc)
   const status = details?.isDeleted ? 'Deleted' : 'Active'
   const directory = details?.directory
   const totalVersions = details?.metadata?.totalVersions ?? details?.versions?.length ?? 0

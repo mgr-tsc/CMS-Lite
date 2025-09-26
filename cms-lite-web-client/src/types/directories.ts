@@ -4,7 +4,7 @@ export interface ContentItemNode {
     latestVersion: number
     contentType: string
     isDeleted: boolean
-    byteSize?: number
+    size?: string
     createdAtUtc?: string
     updatedAtUtc?: string
 }
@@ -23,7 +23,7 @@ export interface ApiContentItem {
     latestVersion: number
     contentType: string
     isDeleted: boolean
-    byteSize?: number
+    size?: string
     createdAtUtc?: string
     updatedAtUtc?: string
 }
