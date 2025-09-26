@@ -134,7 +134,21 @@ public class ContentItemRepo : IContentItemRepo
             current = await dbContext.DirectoriesTable.FirstOrDefaultAsync(d => d.Id == current.ParentId);
         }
 
-        return pathParts.Count > 0 ? "/" + string.Join("/", pathParts) : "/";
+        if (pathParts.Count == 0)
+        {
+            return "/";
+        }
+        var sb = new System.Text.StringBuilder();
+        sb.Append("/");
+        for (int i = 0; i < pathParts.Count; i++)
+        {
+            sb.Append(pathParts[i]);
+            if (i < pathParts.Count - 1)
+            {
+                sb.Append("/");
+            }
+        }
+        return sb.ToString();
     }
 
     private static string FormatBytes(long bytes)
