@@ -29,6 +29,9 @@ const mapContentItems = (items: ApiContentItem[], directoryId: string): ContentI
     latestVersion: item.latestVersion,
     contentType: item.contentType,
     isDeleted: item.isDeleted,
+    byteSize: item.byteSize,
+    createdAtUtc: item.createdAtUtc,
+    updatedAtUtc: item.updatedAtUtc,
   }))
 
 const mapDirectoryTree = (node: ApiDirectoryNode, parentId: string | null = null): DirectoryNode => ({

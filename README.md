@@ -116,9 +116,11 @@ curl -X POST http://localhost:8080/auth/refresh \
 - **DELETE /v1/{tenant}/{resource}** → Soft delete content
 - **GET /v1/{tenant}** → List tenant resources (with filtering/pagination)
 - **GET /v1/{tenant}/{resource}/versions** → List all versions of resource
+- **GET /v1/{tenant}/{resource}/details** → Get comprehensive resource details with version history and directory info
 
 ### 📂 Directory Management (Authenticated)
 - **GET /v1/{tenant}/directories** → List directory tree for tenant
+- **GET /v1/{tenant}/directories/tree** → Get complete directory tree with all content items in single response
 - **POST /v1/{tenant}/directories** → Create new directory with optional parent
 - **GET /v1/{tenant}/directories/{id}** → Get directory details and metadata
 - **GET /v1/{tenant}/directories/{id}/contents** → Get content items in directory
@@ -417,6 +419,96 @@ Authorization: Bearer {your-jwt-token}
   ],
   "nextCursor": null,
   "totalCount": 1
+}
+```
+
+**Get Complete Directory Tree** (GET /v1/{tenant}/directories/tree):
+```bash
+GET http://localhost:8080/v1/acme/directories/tree
+Authorization: Bearer {your-jwt-token}
+
+# Response:
+{
+  "tenantId": "acme",
+  "tenantName": "acme",
+  "totalDirectories": 3,
+  "totalContentItems": 5,
+  "rootDirectory": {
+    "id": "root-dir-id",
+    "name": "Root",
+    "level": 0,
+    "subDirectories": [
+      {
+        "id": "docs-dir-id",
+        "name": "Documentation",
+        "level": 1,
+        "subDirectories": [],
+        "contentItems": [
+          {
+            "resource": "api-docs",
+            "latestVersion": 3,
+            "contentType": "application/json",
+            "isDeleted": false
+          }
+        ]
+      }
+    ],
+    "contentItems": [
+      {
+        "resource": "config",
+        "latestVersion": 2,
+        "contentType": "application/json",
+        "isDeleted": false
+      }
+    ]
+  }
+}
+```
+
+**Get Content Details** (GET /v1/{tenant}/{resource}/details):
+```bash
+GET http://localhost:8080/v1/acme/config/details
+Authorization: Bearer {your-jwt-token}
+
+# Response:
+{
+  "resource": "config",
+  "latestVersion": 2,
+  "contentType": "application/json",
+  "byteSize": 145,
+  "eTag": "etag-def456...",
+  "sha256": "sha256hash...",
+  "createdAtUtc": "2024-01-01T12:00:00Z",
+  "updatedAtUtc": "2024-01-01T12:05:00Z",
+  "isDeleted": false,
+  "directory": {
+    "id": "root-dir-id",
+    "name": "Root",
+    "fullPath": "/",
+    "level": 0
+  },
+  "versions": [
+    {
+      "version": 2,
+      "byteSize": 145,
+      "eTag": "etag-def456...",
+      "createdAtUtc": "2024-01-01T12:05:00Z"
+    },
+    {
+      "version": 1,
+      "byteSize": 128,
+      "eTag": "etag-abc123...",
+      "createdAtUtc": "2024-01-01T12:00:00Z"
+    }
+  ],
+  "metadata": {
+    "tenantId": "acme",
+    "tenantName": "acme",
+    "hasMultipleVersions": true,
+    "totalVersions": 2,
+    "fileExtension": "",
+    "readableSize": "145 bytes"
+  }
 }
 ```
 
@@ -722,12 +814,14 @@ dotnet test --logger "console;verbosity=detailed"
 - **🔐 Complete Authentication System**: JWT with session management and token rotation
 - **🏢 Multi-tenant Content API**: All CRUD operations with tenant isolation
 - **📂 Directory Management**: Hierarchical organization with 5-level nesting and security
+- **🌲 Full Directory Tree API**: Single endpoint returns complete hierarchical structure with all content
+- **📋 Content Details API**: Comprehensive resource information with version history and directory context
 - **⚖️ Transactional Consistency**: Compensation pattern for blob/database operations
 - **🛡️ Enhanced Security**: Directory validation, tenant isolation, root protection
 - **🎨 React Frontend**: Responsive UI with authentication integration
 - **🗄️ Database Schema**: Optimized relationships with directory support
 - **🛡️ Security Middleware**: Authentication and tenant validation
-- **🧪 Comprehensive Testing**: 37 tests with directory API and compensation coverage
+- **🧪 Comprehensive Testing**: 45+ tests including new endpoint coverage
 - **🐳 Docker Environment**: Full development containerization
 - **📚 OpenAPI Documentation**: Swagger UI with JWT authentication support
 
