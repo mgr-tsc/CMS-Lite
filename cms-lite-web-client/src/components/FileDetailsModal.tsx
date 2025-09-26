@@ -65,7 +65,7 @@ const formatSize = (_bytes?: number, readableSize?: string): string => {
   if (readableSize && readableSize.trim().length > 0) {
     return readableSize
   }
-  return 'Unknown'
+  return ''
 }
 
 const formatDate = (isoDate?: string): string => {
@@ -169,7 +169,6 @@ export const FileDetailsModal = ({ open, details, isLoading, error, resourceId, 
                       {versions.map((versionInfo) => (
                         <div key={versionInfo.version} className={styles.versionRow}>
                           <span>v{versionInfo.version}</span>
-                          <span>{`${formatSize(versionInfo.byteSize)} • ${formatDate(versionInfo.createdAtUtc)}`}</span>
                         </div>
                       ))}
                     </div>
