@@ -67,7 +67,8 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalXL,
-    height: '100%',
+    flex: 1,
+    minHeight: 0,
     maxWidth: '1200px',
     width: '100%',
     margin: '0 auto',
@@ -84,15 +85,44 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalXL,
     gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
     alignItems: 'stretch',
+    gridAutoRows: '1fr',
+    flex: 1,
+    minHeight: 0,
+  },
+  inputCard: {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: tokens.colorNeutralBackground2,
+    gap: tokens.spacingVerticalM,
+    minHeight: '320px',
+    overflow: 'hidden',
+  },
+  inputCardBody: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+    overflow: 'hidden',
   },
   textarea: {
-    minHeight: '320px',
+    flex: 1,
+    minHeight: 0,
+    display: 'flex',
+    overflow: 'hidden',
+    '& textarea': {
+      flex: 1,
+      minHeight: 0,
+      overflow: 'auto',
+    },
   },
   viewerCard: {
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: tokens.colorNeutralBackground2,
+    minHeight: '320px',
+    overflow: 'hidden',
   },
   viewerContainer: {
     flex: 1,
@@ -101,6 +131,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     borderRadius: tokens.borderRadiusMedium,
     border: `1px solid ${tokens.colorNeutralStroke3}`,
+    minHeight: 0,
   },
   importSections: {
     display: 'flex',
@@ -505,18 +536,20 @@ export const JsonViewer = () => {
         </div>
 
         <div className={styles.editorsWrapper}>
-          <Card>
+          <Card className={styles.inputCard}>
             <CardHeader
               header={<Text weight="semibold">JSON Input</Text>}
               description="Paste or edit the payload, then format to refresh the viewer."
             />
-            <Textarea
-              className={styles.textarea}
-              value={input}
-              onChange={(_, data) => setInput(data.value)}
-              resize="vertical"
-              appearance="outline"
-            />
+            <div className={styles.inputCardBody}>
+              <Textarea
+                className={styles.textarea}
+                value={input}
+                onChange={(_, data) => setInput(data.value)}
+                resize="none"
+                appearance="outline"
+              />
+            </div>
             <CardFooter>
               <Button icon={<CheckmarkRegular />} appearance="primary" onClick={handleFormat}>
                 Format JSON
