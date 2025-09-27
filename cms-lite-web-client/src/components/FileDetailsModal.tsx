@@ -1,4 +1,4 @@
-import { Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Button, Text, makeStyles, tokens, Spinner } from '@fluentui/react-components'
+import { Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Button, Text, Link, makeStyles, tokens, Spinner } from '@fluentui/react-components'
 import { formatFileDate } from '../utilities/file-formatters'
 import type { ContentItemDetails } from '../types/content'
 
@@ -10,6 +10,7 @@ interface FileDetailsModalProps {
   resourceId: string | null
   onClose: () => void
   onRetry?: () => void
+  onOpenJsonViewer?: (resourceId: string, details: ContentItemDetails | null) => void
 }
 
 const useStyles = makeStyles({
@@ -60,9 +61,21 @@ const useStyles = makeStyles({
     padding: tokens.spacingVerticalM,
     borderRadius: tokens.borderRadiusMedium,
   },
+  actionLink: {
+    alignSelf: 'center',
+  },
 })
 
-export const FileDetailsModal = ({ open, details, isLoading, error, resourceId, onClose, onRetry }: FileDetailsModalProps) => {
+export const FileDetailsModal = ({
+  open,
+  details,
+  isLoading,
+  error,
+  resourceId,
+  onClose,
+  onRetry,
+  onOpenJsonViewer,
+}: FileDetailsModalProps) => {
   const styles = useStyles()
 
   const name = details?.resource ?? resourceId ?? 'Unknown'
@@ -77,6 +90,12 @@ export const FileDetailsModal = ({ open, details, isLoading, error, resourceId, 
   const totalVersions = details?.metadata?.totalVersions ?? details?.versions?.length ?? 0
   const versions = details?.versions ?? []
   const showVersions = versions.length > 0
+  const canOpenJsonViewer = Boolean(
+    resourceId &&
+      details &&
+      (details.contentType?.toLowerCase().includes('json') ||
+        details.metadata?.fileExtension?.toLowerCase() === 'json'),
+  )
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) onClose() }}>
@@ -165,6 +184,18 @@ export const FileDetailsModal = ({ open, details, isLoading, error, resourceId, 
               <Button appearance="secondary" onClick={onRetry} disabled={isLoading}>
                 Retry
               </Button>
+            )}
+            {canOpenJsonViewer && onOpenJsonViewer && resourceId && (
+              <Link
+                className={styles.actionLink}
+                href="#"
+                onClick={(event) => {
+                  event.preventDefault()
+                  onOpenJsonViewer(resourceId, details)
+                }}
+              >
+                See in JSON viewer
+              </Link>
             )}
             <Button appearance="primary" onClick={onClose} disabled={isLoading}>
               Close
