@@ -253,11 +253,18 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             return
         }
 
+        const tenantName = user?.tenant?.name
+
         setDetailsState(prev => ({...prev, open: false}))
         navigate('/tools/json-viewer', {
             state: {
                 resourceId,
                 metadata: details,
+                tenantName,
+                contentType: details?.contentType,
+                fileExtension: details?.metadata?.fileExtension,
+                version: details?.latestVersion,
+                viewer: 'json' as const,
             },
         })
     }
