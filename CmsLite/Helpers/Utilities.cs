@@ -7,6 +7,12 @@ public enum FileSizeUnit
     MB
 }
 
+public enum SupportedContentType
+{
+    Json,
+    Xml
+}
+
 public class Utilities
 {
     public static (string tenant, string resource) ParseTenantResource(string tenant, string resource)
@@ -47,6 +53,25 @@ public class Utilities
         }
     }
 
+    public static bool IsValidXml(byte[] data)
+    {
+        try
+        {
+            var doc = new System.Xml.XmlDocument();
+            doc.LoadXml(System.Text.Encoding.UTF8.GetString(data));
+            return true;
+        }
+        catch (System.Xml.XmlException)
+        {
+            return false;
+        }
+    }
+
+    //TODO: Implement XML schema validation
+    public static bool IsValidXmlWithSchema(byte[] data, string schemaPath)
+    {
+        throw new NotImplementedException();
+    }
     public static bool IsValidJsonWithComments(byte[] data)
     {
         var options = new System.Text.Json.JsonDocumentOptions
@@ -88,4 +113,23 @@ public class Utilities
             return $"{CalculateKbFromBytes(byteCount).result} KB";
     }
 
+    public static SupportedContentType ParseContentType(string contentTypeHeader)
+    {
+        // Extract just the media type (before any semicolon) and normalize
+        var mediaType = contentTypeHeader.Split(';')[0].Trim().ToLower();
+
+        return mediaType switch
+        {
+            "application/json" => SupportedContentType.Json,
+            "application/xml" => SupportedContentType.Xml,
+            "text/xml" => SupportedContentType.Xml,
+            _ => throw new ArgumentException($"Unsupported content type '{mediaType}'. Only 'application/json', 'application/xml', and 'text/xml' are supported.")
+        };
+    }
+
+    public static string GenerateBlobKey(string tenant, string resource, int version, SupportedContentType contentType)
+    {
+        var ext = contentType.ToString().ToLower();
+        return $"{tenant}/{resource}_v{version}.{ext}";
+    }
 }

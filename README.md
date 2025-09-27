@@ -109,7 +109,8 @@ curl -X POST http://localhost:8080/auth/refresh \
 - **POST /attach-user** → Attach user to existing tenant
 
 ### 📁 Content Management (Authenticated)
-- **PUT /v1/{tenant}/{resource}** → Create/update JSON content (auto-versioned)
+- **PUT /v1/{tenant}/{resource}** → Create/update JSON or XML content (auto-versioned)
+  - *Required header*: `Content-Type: application/json`, `application/xml`, or `text/xml`
   - *Optional header*: `X-Directory-Id: {directoryId}` (if not provided, uses root directory)
 - **GET /v1/{tenant}/{resource}** → Retrieve content (latest or specific version)
 - **HEAD /v1/{tenant}/{resource}** → Get metadata without content body
@@ -219,6 +220,36 @@ X-Directory-Id: {directory-id-from-your-setup}
   "title": "Welcome to Our Site",
   "content": "This is the homepage content",
   "published": true
+}
+```
+
+**Create XML Content** (PUT /v1/{tenant}/{resource}):
+```bash
+PUT http://localhost:8080/v1/acme/settings.xml
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <database>
+    <host>localhost</host>
+    <port>5432</port>
+    <name>myapp_db</name>
+  </database>
+  <features>
+    <feature name="darkMode" enabled="true"/>
+    <feature name="notifications" enabled="false"/>
+  </features>
+</configuration>
+
+# Response:
+{
+  "tenant": "acme",
+  "resource": "settings.xml",
+  "version": 1,
+  "etag": "etag-def456...",
+  "sha256": "sha256hash...",
+  "size": "1.2 KB"
 }
 ```
 

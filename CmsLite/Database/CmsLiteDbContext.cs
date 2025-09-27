@@ -113,7 +113,7 @@ public static class DbSet
         public string DirectoryId { get; set; } = default!; // Foreign key
         public string Resource { get; set; } = default!;
         public int LatestVersion { get; set; }
-        public string ContentType { get; set; } = "application/json";
+        public string ContentType { get; set; } = default!;
         public long ByteSize { get; set; }
         public string Sha256 { get; set; } = default!;
         public string ETag { get; set; } = default!;

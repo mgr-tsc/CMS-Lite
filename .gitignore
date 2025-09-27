@@ -74,3 +74,4 @@ __blobstorage__/
 
 CmsLite/cms.sqlite
 CmsLite/cms.sqlite-*
+*.csx
