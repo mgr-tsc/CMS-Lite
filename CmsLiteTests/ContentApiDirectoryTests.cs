@@ -241,8 +241,8 @@ public class ContentApiDirectoryTests
         var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-content", requestContent);
         Assert.Equal(HttpStatusCode.Created, putResponse.StatusCode);
 
-        // Verify blob was created
-        var blobKey = $"{factory.TestTenant}/test-content/v1.json";
+        // Verify blob was created (using new blob key format)
+        var blobKey = $"{factory.TestTenant}/test-content_v1.json";
         var blob = await blobRepo.DownloadAsync(blobKey);
         Assert.NotNull(blob);
 

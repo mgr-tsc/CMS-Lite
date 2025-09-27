@@ -23,14 +23,41 @@ public static class ContentEndpoints
             IDirectoryRepo directoryRepo) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
-            if (!req.ContentType?.StartsWith("application/json") ?? true)
+
+            // Validate content type is specified
+            if (string.IsNullOrEmpty(req.ContentType))
             {
-                return Results.BadRequest("Only application/json is allowed.");
+                return Results.BadRequest("Content-Type header is required. Supported types: application/json, application/xml, text/xml");
+            }
+
+            // Parse and validate supported content type
+            SupportedContentType contentType;
+            try
+            {
+                contentType = Utilities.ParseContentType(req.ContentType);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(ex.Message);
             }
             using var ms = new MemoryStream();
             await req.Body.CopyToAsync(ms);
             var bytes = ms.ToArray();
             if (bytes.Length == 0) return Results.BadRequest("Empty body.");
+
+            // Validate content format
+            var isValidContent = contentType switch
+            {
+                SupportedContentType.Json => Utilities.IsValidJson(bytes),
+                SupportedContentType.Xml => Utilities.IsValidXml(bytes),
+                _ => false
+            };
+
+            if (!isValidContent)
+            {
+                return Results.BadRequest($"Invalid {contentType.ToString().ToLower()} content format.");
+            }
+
             // Calculate content integrity hash
             string sha256;
             using (var sha = SHA256.Create())
@@ -47,7 +74,7 @@ public static class ContentEndpoints
             }
             // Determine next version and blob key
             var nextVersion = (item?.LatestVersion ?? 0) + 1;
-            var blobKey = $"{tenant}/{resource}/v{nextVersion}.json";
+            var blobKey = Utilities.GenerateBlobKey(tenant, resource, nextVersion, contentType);
             // Get the actual tenant ID from the tenant name
             var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
             if (!tenantSuccess) return tenantError!;
@@ -76,7 +103,7 @@ public static class ContentEndpoints
             string? uploadedBlobKey = null;
             try
             {
-                var (etag, size) = await blobs.UploadJsonAsync(blobKey, bytes);
+                var (etag, size) = await blobs.UploadAsync(blobKey, bytes); // Generic upload - validation already done above
                 uploadedBlobKey = blobKey; // Track for potential cleanup
                 try
                 {
@@ -89,7 +116,7 @@ public static class ContentEndpoints
                             DirectoryId = directoryId,
                             Resource = resource,
                             LatestVersion = nextVersion,
-                            ContentType = "application/json",
+                            ContentType = contentType == SupportedContentType.Json ? "application/json" : "application/xml",
                             ByteSize = size,
                             Sha256 = sha256,
                             ETag = etag,
@@ -107,6 +134,7 @@ public static class ContentEndpoints
                         item.ETag = etag;
                         item.UpdatedAtUtc = DateTime.UtcNow;
                         item.IsDeleted = false;
+                        item.ContentType = contentType == SupportedContentType.Json ? "application/json" : "application/xml";
                     }
                     // Create version history record
                     db.ContentVersionsTable.Add(new DbSet.ContentVersion
@@ -173,11 +201,13 @@ public static class ContentEndpoints
             if (latest == null) return Results.NotFound();
 
             var v = version ?? latest.LatestVersion;
-            var blobKey = $"{tenant}/{resource}/v{v}.json";
+            // Determine blob key based on stored content type
+            var contentTypeEnum = latest.ContentType == "application/xml" ? SupportedContentType.Xml : SupportedContentType.Json;
+            var blobKey = Utilities.GenerateBlobKey(tenant, resource, v, contentTypeEnum);
             var blob = await blobs.DownloadAsync(blobKey);
             if (blob == null) return Results.NotFound();
 
-            res.ContentType = "application/json";
+            res.ContentType = latest.ContentType;
             res.Headers.ETag = blob.Value.ETag;
             await res.Body.WriteAsync(blob.Value.Bytes);
             return Results.Empty;
@@ -206,11 +236,13 @@ public static class ContentEndpoints
             if (latest == null) return Results.NotFound();
 
             var v = version ?? latest.LatestVersion;
-            var blobKey = $"{tenant}/{resource}/v{v}.json";
+            // Determine blob key based on stored content type
+            var contentTypeEnum = latest.ContentType == "application/xml" ? SupportedContentType.Xml : SupportedContentType.Json;
+            var blobKey = Utilities.GenerateBlobKey(tenant, resource, v, contentTypeEnum);
             var head = await blobs.HeadAsync(blobKey);
             if (head == null) return Results.NotFound();
 
-            res.ContentType = "application/json";
+            res.ContentType = latest.ContentType;
             res.Headers.ETag = head.Value.ETag;
             res.ContentLength = head.Value.Size;
             return Results.Empty;

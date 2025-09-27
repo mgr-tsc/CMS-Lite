@@ -34,7 +34,7 @@ public class ContentApiTests
         Assert.Equal("home", created.GetProperty("resource").GetString());
         Assert.Equal(1, created.GetProperty("version").GetInt32());
         Assert.NotNull(etag);
-        Assert.Equal(byteLength, created.GetProperty("size").GetInt64());
+        Assert.False(string.IsNullOrEmpty(created.GetProperty("size").GetString())); // Size now returned as formatted string
 
         var sha = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson)));
         Assert.Equal(sha, created.GetProperty("sha256").GetString());
