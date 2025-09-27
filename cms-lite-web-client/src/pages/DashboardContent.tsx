@@ -6,14 +6,10 @@ import {
   CardPreview,
   Body1,
   Title2,
-  Title3,
-  Caption1
 } from '@fluentui/react-components'
 import type { RootState } from '../store/store'
 import {
   selectDashboardStats,
-  selectRecentFiles,
-  selectActivities,
   selectDashboardErrors,
 } from '../store/slices/dashboard'
 
@@ -81,8 +77,6 @@ export const DashboardContent = () => {
   
   // Redux selectors
   const stats = useSelector((state: RootState) => selectDashboardStats(state))
-  const recentFiles = useSelector((state: RootState) => selectRecentFiles(state))
-  const activities = useSelector((state: RootState) => selectActivities(state))
   const errors = useSelector((state: RootState) => selectDashboardErrors(state))
   
   return (
@@ -123,69 +117,6 @@ export const DashboardContent = () => {
           <Body1>Error loading stats: {errors.stats}</Body1>
         </div>
       )}
-      
-      {/* Main Content Grid */}
-      <div className={styles.contentGrid}>
-        {/* Recent Files Section */}
-        <div className={styles.section}>
-          <Title3 className={styles.sectionTitle}>Recent Files</Title3>
-          {errors.recentFiles ? (
-            <div className={styles.errorMessage}>
-              <Body1>Error loading recent files: {errors.recentFiles}</Body1>
-            </div>
-          ) : (
-            <Card>
-              <CardPreview>
-                {recentFiles.length > 0 ? (
-                  recentFiles.map((file) => (
-                    <div key={file.id} className={styles.listItem}>
-                      <div>
-                        <Body1>{file.name}</Body1>
-                        <Caption1>{file.type} • {file.size}</Caption1>
-                      </div>
-                      <Caption1>{file.modifiedDate}</Caption1>
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.listItem}>
-                    <Body1>No recent files found</Body1>
-                  </div>
-                )}
-              </CardPreview>
-            </Card>
-          )}
-        </div>
-        
-        {/* Activities Section */}
-        <div className={styles.section}>
-          <Title3 className={styles.sectionTitle}>Recent Activities</Title3>
-          {errors.activities ? (
-            <div className={styles.errorMessage}>
-              <Body1>Error loading activities: {errors.activities}</Body1>
-            </div>
-          ) : (
-            <Card>
-              <CardPreview>
-                {activities.length > 0 ? (
-                  activities.map((activity) => (
-                    <div key={activity.id} className={styles.listItem}>
-                      <div>
-                        <Body1>{activity.action}</Body1>
-                        <Caption1>{activity.fileName} by {activity.user}</Caption1>
-                      </div>
-                      <Caption1>{activity.timestamp}</Caption1>
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.listItem}>
-                    <Body1>No recent activities found</Body1>
-                  </div>
-                )}
-              </CardPreview>
-            </Card>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

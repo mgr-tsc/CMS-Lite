@@ -1,6 +1,7 @@
 import type {CSSProperties, ReactNode} from 'react'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 import {isAxiosError} from 'axios'
+import {useNavigate} from 'react-router-dom'
 import {useDispatch, useSelector} from 'react-redux'
 import {makeStyles} from '@fluentui/react-components'
 import {Header} from './Header'
@@ -145,6 +146,7 @@ const appendPathSegment = (basePath: string, segment: string): string => {
 export const AppLayout = ({children}: AppLayoutProps) => {
     const styles = useStyles()
     const dispatch = useDispatch<AppDispatch>()
+    const navigate = useNavigate()
     const {user, isAuthenticated} = useAuth()
     const rootDirectory = useSelector(selectDirectoryTreeRoot)
     const directoryLoading = useSelector(selectDirectoryTreeLoading)
@@ -413,6 +415,27 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         void loadFileDetails(tenantName, detailsState.resourceId)
     }
 
+    const handleOpenJsonViewer = (resourceId: string, details: ContentItemDetails | null) => {
+        if (!resourceId) {
+            return
+        }
+
+        const tenantName = user?.tenant?.name
+
+        setDetailsState(prev => ({...prev, open: false}))
+        navigate('/tools/json-viewer', {
+            state: {
+                resourceId,
+                metadata: details,
+                tenantName,
+                contentType: details?.contentType,
+                fileExtension: details?.metadata?.fileExtension,
+                version: details?.latestVersion,
+                viewer: 'json' as const,
+            },
+        })
+    }
+
     const handleRefresh = () => {
         const tenantName = user?.tenant?.name
         if (tenantName) {
@@ -509,6 +532,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 resourceId={detailsState.resourceId}
                 onClose={handleCloseDetails}
                 onRetry={detailsState.error ? handleRetryDetails : undefined}
+                onOpenJsonViewer={handleOpenJsonViewer}
             />
         </div>
     )

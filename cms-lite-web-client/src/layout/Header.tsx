@@ -81,12 +81,15 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
-        <Button
-          icon={<NavigationRegular />}
-          appearance="subtle"
-          onClick={onToggleNavMenu}
-          className={styles.navToggleButton}
-        />
+        {onToggleNavMenu && (
+          <Button
+            icon={<NavigationRegular />}
+            appearance="subtle"
+            onClick={onToggleNavMenu}
+            className={styles.navToggleButton}
+            aria-label="Toggle navigation menu"
+          />
+        )}
         <div className={styles.titleSection}>
           <Text as="h1" size={800} weight="bold">
             CMS Lite - Content Management System

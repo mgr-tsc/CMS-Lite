@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { FluentProvider, teamsLightTheme } from '@fluentui/react-components'
 import { AuthProvider } from './contexts'
 import { ProtectedRoute } from './components'
-import { SignIn, Dashboard } from './pages'
+import { SignIn, Dashboard, JsonViewer } from './pages'
 import store from './store/store'
 import './App.css'
 import { useEffect } from 'react'
@@ -23,6 +23,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/json-viewer"
+              element={
+                <ProtectedRoute>
+                  <JsonViewer />
                 </ProtectedRoute>
               }
             />

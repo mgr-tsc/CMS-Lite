@@ -63,9 +63,10 @@ const useStyles = makeStyles({
 
 interface MainLayoutProps {
     children?: ReactNode
+    variant?: 'explorer' | 'viewer'
 }
 
-export const MainLayout = ({ children }: MainLayoutProps) => {
+export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) => {
   const styles = useStyles()
   const [selectedItem, setSelectedItem] = useState<DirectoryNode | null>(null)
   const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(false)
@@ -125,6 +126,20 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
   const handleToggleNavMenu = () => {
     setIsNavMenuCollapsed((prev) => !prev)
+  }
+
+  if (variant === 'viewer') {
+    return (
+      <div className={styles.container}>
+        <Header />
+
+        <div className={styles.content}>
+          <main className={styles.mainContent}>{children}</main>
+        </div>
+
+        <Footer />
+      </div>
+    )
   }
 
   return (
