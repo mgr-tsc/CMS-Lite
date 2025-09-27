@@ -603,11 +603,10 @@ export const JsonViewer = () => {
 
       <Dialog
         open={isImportDialogOpen}
-        onOpenChange={(event: SyntheticEvent<HTMLElement>, data: { open: boolean }) => {
+        onOpenChange={(_event: SyntheticEvent<HTMLElement>, data: { open: boolean }) => {
           if (!data.open) {
             closeImportDialog()
           }
-          void event
         }}
       >
         <DialogSurface>
