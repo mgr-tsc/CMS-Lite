@@ -67,11 +67,6 @@ public class Utilities
         }
     }
 
-    //TODO: Implement XML schema validation
-    public static bool IsValidXmlWithSchema(byte[] data, string schemaPath)
-    {
-        throw new NotImplementedException();
-    }
     public static bool IsValidJsonWithComments(byte[] data)
     {
         var options = new System.Text.Json.JsonDocumentOptions
