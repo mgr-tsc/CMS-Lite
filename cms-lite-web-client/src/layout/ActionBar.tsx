@@ -1,6 +1,6 @@
 import { Button, makeStyles, tokens } from '@fluentui/react-components'
 import {
-  AddRegular,
+  FolderAddRegular,
   EditRegular,
   DeleteRegular,
   EyeRegular,
@@ -47,7 +47,8 @@ const useStyles = makeStyles({
 
 interface ActionBarProps {
   hasSelection: boolean
-  onNewContent?: () => void
+  onNewDirectory?: () => void
+  disableNewDirectory?: boolean
   onEditContent?: () => void
   onDeleteContent?: () => void
   onSeeDetails?: () => void
@@ -57,7 +58,8 @@ interface ActionBarProps {
 
 export const ActionBar = ({
   hasSelection,
-  onNewContent,
+  onNewDirectory,
+  disableNewDirectory,
   onEditContent,
   onDeleteContent,
   onSeeDetails,
@@ -70,11 +72,12 @@ export const ActionBar = ({
     <div className={styles.actionBar}>
       <div className={styles.buttonGroup}>
         <Button
-          icon={<AddRegular />}
+          icon={<FolderAddRegular />}
           appearance="primary"
-          onClick={onNewContent}
+          onClick={onNewDirectory}
+          disabled={disableNewDirectory}
         >
-          New Content
+          New Directory
         </Button>
 
         <Button

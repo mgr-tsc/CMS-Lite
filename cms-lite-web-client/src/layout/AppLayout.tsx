@@ -1,5 +1,6 @@
 import type {CSSProperties, ReactNode} from 'react'
 import {useCallback, useEffect, useMemo, useState} from 'react'
+import {isAxiosError} from 'axios'
 import {useDispatch, useSelector} from 'react-redux'
 import {makeStyles} from '@fluentui/react-components'
 import {Header} from './Header'
@@ -25,6 +26,7 @@ import {
     type DirectoryNode,
 } from '../store/slices/directoryTree'
 import {FileDetailsModal} from '../components/FileDetailsModal'
+import {CreateDirectoryDialog} from '../components/CreateDirectoryDialog'
 import customAxios from '../utilities/custom-axios'
 import type {ContentItemDetails} from '../types/content'
 
@@ -93,6 +95,53 @@ interface FileDetailsState {
     resourceId: string | null
 }
 
+interface CreateDirectoryState {
+    open: boolean
+    name: string
+    isSubmitting: boolean
+    error: string | null
+}
+
+const findDirectoryPathSegments = (root: DirectoryNode | null, targetId: string | null): string[] => {
+    if (!root || !targetId) {
+        return []
+    }
+
+    const traverse = (node: DirectoryNode, trail: string[]): string[] | null => {
+        const nextTrail = [...trail, node.name]
+        if (node.id === targetId) {
+            return nextTrail
+        }
+        for (const child of node.subDirectories) {
+            const result = traverse(child, nextTrail)
+            if (result) {
+                return result
+            }
+        }
+        return null
+    }
+
+    return traverse(root, []) ?? []
+}
+
+const buildPathString = (segments: string[]): string => {
+    if (segments.length === 0) {
+        return '/'
+    }
+    return `/${segments.join('/')}`
+}
+
+const appendPathSegment = (basePath: string, segment: string): string => {
+    const trimmedSegment = segment.trim()
+    if (!trimmedSegment) {
+        return basePath === '/' ? '/' : `${basePath}/`
+    }
+    if (basePath === '/' || basePath.length === 0) {
+        return `/${trimmedSegment}`
+    }
+    return `${basePath}/${trimmedSegment}`
+}
+
 export const AppLayout = ({children}: AppLayoutProps) => {
     const styles = useStyles()
     const dispatch = useDispatch<AppDispatch>()
@@ -115,6 +164,12 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         error: null,
         data: null,
         resourceId: null,
+    })
+    const [createDirectoryState, setCreateDirectoryState] = useState<CreateDirectoryState>({
+        open: false,
+        name: '',
+        isSubmitting: false,
+        error: null,
     })
 
     useEffect(() => {
@@ -178,8 +233,13 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         setSelectedFiles(fileIds)
     }
 
-    const handleNewContent = () => {
-        console.log('Creating new content...')
+    const handleNewDirectory = () => {
+        setCreateDirectoryState({
+            open: true,
+            name: '',
+            isSubmitting: false,
+            error: null,
+        })
     }
 
     const handleEditContent = () => {
@@ -191,6 +251,104 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     const handleDeleteContent = () => {
         if (selectedFiles.length > 0) {
             console.log('Deleting content:', selectedFiles)
+        }
+    }
+
+    const handleDirectoryNameChange = (value: string) => {
+        setCreateDirectoryState(prev => ({
+            ...prev,
+            name: value,
+            error: null,
+        }))
+    }
+
+    const handleCancelCreateDirectory = () => {
+        if (createDirectoryState.isSubmitting) {
+            return
+        }
+        setCreateDirectoryState({
+            open: false,
+            name: '',
+            isSubmitting: false,
+            error: null,
+        })
+    }
+
+    const handleSubmitCreateDirectory = async () => {
+        const tenantName = user?.tenant?.name
+        const parentDirectory = effectiveDirectory
+
+        if (!tenantName || !parentDirectory) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: 'Missing tenant or directory context. Please try again.',
+            }))
+            return
+        }
+
+        const trimmedName = createDirectoryState.name.trim()
+        if (!trimmedName) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: 'Directory name is required.',
+            }))
+            return
+        }
+
+        const hasDuplicate = parentDirectory.subDirectories.some(
+            (directory) => directory.name.toLowerCase() === trimmedName.toLowerCase(),
+        )
+
+        if (hasDuplicate) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: `A directory named "${trimmedName}" already exists here.`,
+            }))
+            return
+        }
+
+        setCreateDirectoryState(prev => ({
+            ...prev,
+            isSubmitting: true,
+            error: null,
+        }))
+
+        try {
+            await customAxios.post(`/v1/${tenantName}/directories`, {
+                name: trimmedName,
+                parentId: parentDirectory.id,
+            })
+
+            setCreateDirectoryState({
+                open: false,
+                name: '',
+                isSubmitting: false,
+                error: null,
+            })
+
+            await dispatch(fetchDirectoryTree(tenantName))
+        } catch (error) {
+            let message = 'Failed to create directory.'
+            if (isAxiosError(error)) {
+                if (error.response?.status === 409) {
+                    message = `A directory named "${trimmedName}" already exists here.`
+                } else if (error.response?.data && typeof error.response.data === 'object') {
+                    const dataMessage = (error.response.data as { message?: string }).message
+                    if (dataMessage) {
+                        message = dataMessage
+                    }
+                } else if (error.message) {
+                    message = error.message
+                }
+            } else if (error instanceof Error) {
+                message = error.message
+            }
+
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                error: message,
+            }))
         }
     }
 
@@ -209,6 +367,15 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     }, [])
 
     const effectiveDirectory = useMemo(() => currentDirectory ?? rootDirectory ?? null, [currentDirectory, rootDirectory])
+    const parentPathSegments = useMemo(
+        () => findDirectoryPathSegments(rootDirectory, effectiveDirectory?.id ?? null),
+        [rootDirectory, effectiveDirectory?.id],
+    )
+    const parentPathDisplay = useMemo(() => buildPathString(parentPathSegments), [parentPathSegments])
+    const proposedDirectoryPath = useMemo(
+        () => appendPathSegment(parentPathDisplay, createDirectoryState.name.trim() || '(directory-name)'),
+        [parentPathDisplay, createDirectoryState.name],
+    )
 
     const handleSeeDetails = () => {
         const tenantName = user?.tenant?.name
@@ -296,7 +463,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                     <div className={styles.actionBarWrapper}>
                         <ActionBar
                             hasSelection={selectedFiles.length > 0}
-                            onNewContent={handleNewContent}
+                            onNewDirectory={handleNewDirectory}
+                            disableNewDirectory={!effectiveDirectory || !user?.tenant?.name}
                             onEditContent={handleEditContent}
                             onDeleteContent={handleDeleteContent}
                             onSeeDetails={handleSeeDetails}
@@ -321,6 +489,17 @@ export const AppLayout = ({children}: AppLayoutProps) => {
 
             {/* Footer spans full width */}
             <Footer/>
+
+            <CreateDirectoryDialog
+                open={createDirectoryState.open}
+                directoryName={createDirectoryState.name}
+                parentPath={proposedDirectoryPath}
+                isSubmitting={createDirectoryState.isSubmitting}
+                errorMessage={createDirectoryState.error}
+                onNameChange={handleDirectoryNameChange}
+                onCancel={handleCancelCreateDirectory}
+                onSubmit={handleSubmitCreateDirectory}
+            />
 
             <FileDetailsModal
                 open={detailsState.open}
