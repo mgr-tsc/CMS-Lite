@@ -93,8 +93,8 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
     setSelectedFiles(fileIds)
   }
 
-  const handleNewContent = () => {
-    console.log('Creating new content...')
+  const handleNewDirectory = () => {
+    console.log('Creating new directory...')
   }
 
   const handleEditContent = () => {

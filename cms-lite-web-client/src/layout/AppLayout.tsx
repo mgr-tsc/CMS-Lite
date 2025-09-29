@@ -28,6 +28,7 @@ import {
 } from '../store/slices/directoryTree'
 import {FileDetailsModal} from '../components/FileDetailsModal'
 import {CreateDirectoryDialog} from '../components/CreateDirectoryDialog'
+import {SoftDeleteDialog, type SoftDeleteItem} from '../components/SoftDeleteDialog'
 import customAxios from '../utilities/custom-axios'
 import type {ContentItemDetails} from '../types/content'
 
@@ -103,6 +104,13 @@ interface CreateDirectoryState {
     error: string | null
 }
 
+interface SoftDeleteState {
+    open: boolean
+    items: SoftDeleteItem[]
+    isSubmitting: boolean
+    error: string | null
+    successMessage: string | null
+}
 const findDirectoryPathSegments = (root: DirectoryNode | null, targetId: string | null): string[] => {
     if (!root || !targetId) {
         return []
@@ -143,6 +151,9 @@ const appendPathSegment = (basePath: string, segment: string): string => {
     return `${basePath}/${trimmedSegment}`
 }
 
+const delay = (ms: number) => new Promise<void>((resolve) => {
+    setTimeout(resolve, ms)
+});
 export const AppLayout = ({children}: AppLayoutProps) => {
     const styles = useStyles()
     const dispatch = useDispatch<AppDispatch>()
@@ -173,7 +184,13 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         isSubmitting: false,
         error: null,
     })
-
+    const [softDeleteState, setSoftDeleteState] = useState<SoftDeleteState>({
+        open: false,
+        items: [],
+        isSubmitting: false,
+        error: null,
+        successMessage: null,
+    })
     useEffect(() => {
         const tenantName = user?.tenant?.name
         if (!isAuthenticated || !tenantName) {
@@ -224,10 +241,10 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     }
 
     const handleItemSelect = (item: DirectoryNode) => {
-        dispatch(setCurrentDirectory(item.id))
-        setSelectedFiles([]) // Clear file selection when switching directories
+        dispatch(setCurrentDirectory(item.id));
+        setSelectedFiles([]); // Clear file selection when switching directories
         if (isOverlayNav) {
-            setIsNavMenuCollapsed(true)
+            setIsNavMenuCollapsed(true);
         }
     }
 
@@ -251,9 +268,93 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     }
 
     const handleDeleteContent = () => {
-        if (selectedFiles.length > 0) {
-            console.log('Deleting content:', selectedFiles)
+        if (!effectiveDirectory || selectedFiles.length === 0) {
+            return
         }
+
+        const parentPath = parentPathDisplay
+        const items: SoftDeleteItem[] = selectedFiles
+            .map((fileId) => effectiveDirectory.contentItems.find((item) => item.id === fileId))
+            .filter((item): item is NonNullable<typeof item> => Boolean(item))
+            .map((item) => ({
+                id: item.id,
+                name: item.resource,
+                path: appendPathSegment(parentPath, item.resource),
+                resource: item.resource,
+            }))
+
+        if (items.length === 0) {
+            return
+        }
+
+        setSoftDeleteState({
+            open: true,
+            items,
+            isSubmitting: false,
+            error: null,
+            successMessage: null,
+        })
+    }
+
+    const loadFileDetails = useCallback(async (tenantName: string, resourceId: string) => {
+        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
+        try {
+            const {data} = await customAxios.get<ContentItemDetails>(`/v1/${tenantName}/${encodeURIComponent(resourceId)}/details`)
+            setDetailsState(prev => ({...prev, isLoading: false, data}))
+        } catch (error) {
+            let message = 'Failed to load file details'
+            if (error instanceof Error) {
+                message = error.message
+            }
+            setDetailsState(prev => ({...prev, isLoading: false, error: message}))
+        }
+    }, [])
+
+    const effectiveDirectory = useMemo(() => currentDirectory ?? rootDirectory ?? null, [currentDirectory, rootDirectory])
+    const parentPathSegments = useMemo(
+        () => findDirectoryPathSegments(rootDirectory, effectiveDirectory?.id ?? null),
+        [rootDirectory, effectiveDirectory?.id],
+    )
+    const parentPathDisplay = useMemo(() => buildPathString(parentPathSegments), [parentPathSegments])
+    const proposedDirectoryPath = useMemo(
+        () => appendPathSegment(parentPathDisplay, createDirectoryState.name.trim() || '(directory-name)'),
+        [parentPathDisplay, createDirectoryState.name],
+    )
+
+    const handleSeeDetails = () => {
+        const tenantName = user?.tenant?.name
+        if (selectedFiles.length === 0 || !effectiveDirectory || !tenantName) {
+            return
+        }
+
+        const fileId = selectedFiles[0]
+        const file = effectiveDirectory.contentItems.find(item => item.id === fileId)
+        if (!file) {
+            return
+        }
+
+        setDetailsState({
+            open: true,
+            isLoading: true,
+            error: null,
+            data: null,
+            resourceId: file.resource,
+        })
+
+        void loadFileDetails(tenantName, file.resource)
+    }
+
+    const handleCloseDetails = () => {
+        setDetailsState(prev => ({...prev, open: false}))
+    }
+
+    const handleRetryDetails = () => {
+        const tenantName = user?.tenant?.name
+        if (!detailsState.resourceId || !tenantName) {
+            return
+        }
+        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
+        void loadFileDetails(tenantName, detailsState.resourceId)
     }
 
     const handleDirectoryNameChange = (value: string) => {
@@ -329,7 +430,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             })
 
             await dispatch(fetchDirectoryTree(tenantName))
-        } catch (error) {
+        } catch (error: unknown) {
             let message = 'Failed to create directory.'
             if (isAxiosError(error)) {
                 if (error.response?.status === 409) {
@@ -354,65 +455,78 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         }
     }
 
-    const loadFileDetails = useCallback(async (tenantName: string, resourceId: string) => {
-        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
+    const handleCancelSoftDelete = () => {
+        if (softDeleteState.isSubmitting) {
+            return
+        }
+        setSoftDeleteState({
+            open: false,
+            items: [],
+            isSubmitting: false,
+            error: null,
+            successMessage: null,
+        })
+    }
+
+    const handleConfirmSoftDelete = async () => {
+        const tenantName = user?.tenant?.name
+        if (!tenantName || softDeleteState.items.length === 0) {
+            return
+        }
+
+        setSoftDeleteState(prev => ({
+            ...prev,
+            isSubmitting: true,
+            error: null,
+        }))
+
         try {
-            const {data} = await customAxios.get<ContentItemDetails>(`/v1/${tenantName}/${encodeURIComponent(resourceId)}/details`)
-            setDetailsState(prev => ({...prev, isLoading: false, data}))
-        } catch (error) {
-            let message = 'Failed to load file details'
-            if (error instanceof Error) {
+            await delay(2000)
+
+            const resources = softDeleteState.items.map((item) => item.resource)
+            await customAxios.delete(`/v1/${tenantName}/bulk-delete`, {
+                data: {
+                    resources,
+                },
+            })
+
+            const removedCount = resources.length
+
+            setSoftDeleteState({
+                open: true,
+                items: [],
+                isSubmitting: false,
+                error: null,
+                successMessage: `${removedCount} file${removedCount === 1 ? '' : 's'} successfully removed.`,
+            })
+
+            setSelectedFiles([])
+
+            if (rootDirectory?.id) {
+                dispatch(setCurrentDirectory(rootDirectory.id))
+            }
+
+            await dispatch(fetchDirectoryTree(tenantName))
+        } catch (error: unknown) {
+            let message = 'Failed to delete selected items.'
+            if (isAxiosError(error)) {
+                const apiMessage = (error.response?.data as { message?: string } | undefined)?.message
+                if (apiMessage) {
+                    message = apiMessage
+                } else if (error.message) {
+                    message = error.message
+                }
+            } else if (error instanceof Error) {
                 message = error.message
             }
-            setDetailsState(prev => ({...prev, isLoading: false, error: message}))
+
+            setSoftDeleteState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                error: message,
+                successMessage: null,
+            }))
         }
-    }, [])
-
-    const effectiveDirectory = useMemo(() => currentDirectory ?? rootDirectory ?? null, [currentDirectory, rootDirectory])
-    const parentPathSegments = useMemo(
-        () => findDirectoryPathSegments(rootDirectory, effectiveDirectory?.id ?? null),
-        [rootDirectory, effectiveDirectory?.id],
-    )
-    const parentPathDisplay = useMemo(() => buildPathString(parentPathSegments), [parentPathSegments])
-    const proposedDirectoryPath = useMemo(
-        () => appendPathSegment(parentPathDisplay, createDirectoryState.name.trim() || '(directory-name)'),
-        [parentPathDisplay, createDirectoryState.name],
-    )
-
-    const handleSeeDetails = () => {
-        const tenantName = user?.tenant?.name
-        if (selectedFiles.length === 0 || !effectiveDirectory || !tenantName) {
-            return
-        }
-
-        const fileId = selectedFiles[0]
-        const file = effectiveDirectory.contentItems.find(item => item.id === fileId)
-        if (!file) {
-            return
-        }
-
-        setDetailsState({
-            open: true,
-            isLoading: true,
-            error: null,
-            data: null,
-            resourceId: file.resource,
-        })
-
-        void loadFileDetails(tenantName, file.resource)
-    }
-
-    const handleCloseDetails = () => {
-        setDetailsState(prev => ({...prev, open: false}))
-    }
-
-    const handleRetryDetails = () => {
-        const tenantName = user?.tenant?.name
-        if (!detailsState.resourceId || !tenantName) {
-            return
-        }
-        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
-        void loadFileDetails(tenantName, detailsState.resourceId)
     }
 
     const handleOpenJsonViewer = (resourceId: string, details: ContentItemDetails | null) => {
@@ -523,7 +637,15 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 onCancel={handleCancelCreateDirectory}
                 onSubmit={handleSubmitCreateDirectory}
             />
-
+            <SoftDeleteDialog
+                open={softDeleteState.open}
+                items={softDeleteState.items}
+                isSubmitting={softDeleteState.isSubmitting}
+                errorMessage={softDeleteState.error}
+                successMessage={softDeleteState.successMessage}
+                onCancel={handleCancelSoftDelete}
+                onConfirm={handleConfirmSoftDelete}
+            />
             <FileDetailsModal
                 open={detailsState.open}
                 details={detailsState.data}

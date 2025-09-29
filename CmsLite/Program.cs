@@ -7,6 +7,7 @@ using CmsLite.Content;
 using CmsLite.Helpers.RequestMappers;
 using Microsoft.OpenApi.Models;
 using CmsLite.Middlewares;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,11 @@ builder.Services.AddDbContext<CmsLiteDbContext>(options =>
 // Add blob storage services
 builder.Services.AddSingleton(_ => new BlobServiceClient(storageConnectionString));
 builder.Services.AddSingleton<IBlobRepo, BlobRepo>();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+});
+
 builder.AddCmsLiteAuthentication();
 builder.AddCmsRepositories();
 builder.AddLoggingServices();
