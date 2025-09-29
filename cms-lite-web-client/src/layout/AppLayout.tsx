@@ -1,5 +1,5 @@
-import type {CSSProperties, ReactNode} from 'react'
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import type {CSSProperties, ReactNode, ChangeEvent} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {isAxiosError} from 'axios'
 import {useNavigate} from 'react-router-dom'
 import {useDispatch, useSelector} from 'react-redux'
@@ -191,6 +191,9 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         error: null,
         successMessage: null,
     })
+    const importFileInputRef = useRef<HTMLInputElement | null>(null)
+    const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | null>(null)
+    const [importAccept, setImportAccept] = useState('')
     useEffect(() => {
         const tenantName = user?.tenant?.name
         if (!isAuthenticated || !tenantName) {
@@ -259,6 +262,19 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             isSubmitting: false,
             error: null,
         })
+    }
+
+    const handleImportContent = (type: 'json' | 'xml') => {
+        const accept = type === 'json' ? 'application/json,.json' : 'application/xml,text/xml,.xml'
+        setPendingImportType(type)
+        setImportAccept(accept)
+        window.setTimeout(() => {
+            importFileInputRef.current?.click()
+        }, 0)
+    }
+
+    const handleCreateContent = (type: 'json' | 'xml') => {
+        console.log(`Create ${type.toUpperCase()} content flow not yet implemented.`)
     }
 
     const handleEditContent = () => {
@@ -455,6 +471,56 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         }
     }
 
+    const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+
+        if (!pendingImportType || !file) {
+            setPendingImportType(null)
+            return
+        }
+
+        if (pendingImportType === 'json') {
+            const reader = new FileReader()
+            reader.onload = () => {
+                try {
+                    const text =
+                        typeof reader.result === 'string'
+                            ? reader.result
+                            : new TextDecoder().decode(reader.result as ArrayBuffer)
+                    JSON.parse(text)
+                    setPendingImportType(null)
+                    navigate('/tools/json-viewer', {
+                        state: {
+                            rawJson: text,
+                            resourceId: file.name,
+                            tenantName: user?.tenant?.name,
+                        },
+                    })
+                } catch (error) {
+                    console.error('Failed to parse JSON file', error)
+                    alert('Unable to read the selected JSON file. Please verify the content.')
+                    setPendingImportType(null)
+                }
+            }
+            reader.onerror = () => {
+                console.error('Failed to read JSON file', reader.error)
+                alert('Unable to read the selected JSON file. Please try again.')
+                setPendingImportType(null)
+            }
+            reader.readAsText(file)
+            return
+        }
+
+        if (pendingImportType === 'xml') {
+            setPendingImportType(null)
+            alert('XML import flow is not implemented yet.')
+            return
+        }
+
+        setPendingImportType(null)
+    }
+
     const handleCancelSoftDelete = () => {
         if (softDeleteState.isSubmitting) {
             return
@@ -557,12 +623,6 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         }
     }
 
-    const handleViewAll = () => {
-        if (rootDirectory) {
-            dispatch(setCurrentDirectory(rootDirectory.id))
-        }
-    }
-
     const handleToggleNavMenu = () => {
         setIsNavMenuCollapsed(prev => !prev)
     }
@@ -602,11 +662,12 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                             hasSelection={selectedFiles.length > 0}
                             onNewDirectory={handleNewDirectory}
                             disableNewDirectory={!effectiveDirectory || !user?.tenant?.name}
+                            onImportContent={handleImportContent}
+                            onCreateContent={handleCreateContent}
                             onEditContent={handleEditContent}
                             onDeleteContent={handleDeleteContent}
                             onSeeDetails={handleSeeDetails}
                             onRefresh={handleRefresh}
-                            onViewAll={handleViewAll}
                         />
                     </div>
 
@@ -645,6 +706,13 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 successMessage={softDeleteState.successMessage}
                 onCancel={handleCancelSoftDelete}
                 onConfirm={handleConfirmSoftDelete}
+            />
+            <input
+                type="file"
+                ref={importFileInputRef}
+                accept={importAccept}
+                style={{ display: 'none' }}
+                onChange={handleImportFileChange}
             />
             <FileDetailsModal
                 open={detailsState.open}

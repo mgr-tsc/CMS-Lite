@@ -1,4 +1,4 @@
-import { Button, makeStyles, tokens } from '@fluentui/react-components'
+import { Button, makeStyles, tokens, Menu, MenuTrigger, MenuPopover, MenuList, MenuItem } from '@fluentui/react-components'
 import {
   FolderAddRegular,
   EditRegular,
@@ -49,22 +49,24 @@ interface ActionBarProps {
   hasSelection: boolean
   onNewDirectory?: () => void
   disableNewDirectory?: boolean
+  onImportContent?: (type: 'json' | 'xml') => void
+  onCreateContent?: (type: 'json' | 'xml') => void
   onEditContent?: () => void
   onDeleteContent?: () => void
   onSeeDetails?: () => void
   onRefresh?: () => void
-  onViewAll?: () => void
 }
 
 export const ActionBar = ({
   hasSelection,
   onNewDirectory,
   disableNewDirectory,
+  onImportContent,
+  onCreateContent,
   onEditContent,
   onDeleteContent,
   onSeeDetails,
   onRefresh,
-  onViewAll,
 }: ActionBarProps) => {
   const styles = useStyles()
 
@@ -80,12 +82,37 @@ export const ActionBar = ({
           New Directory
         </Button>
 
-        <Button
-          icon={<DocumentRegular />}
-          onClick={onViewAll}
-        >
-          View All
-        </Button>
+        <Menu>
+          <MenuTrigger>
+            <Button icon={<DocumentRegular />}>Content Actions</Button>
+          </MenuTrigger>
+          <MenuPopover>
+            <MenuList>
+              <Menu>
+                <MenuTrigger>
+                  <MenuItem>Import</MenuItem>
+                </MenuTrigger>
+                <MenuPopover>
+                  <MenuList>
+                    <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
+                    <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
+                  </MenuList>
+                </MenuPopover>
+              </Menu>
+              <Menu>
+                <MenuTrigger>
+                  <MenuItem>Create</MenuItem>
+                </MenuTrigger>
+                <MenuPopover>
+                  <MenuList>
+                    <MenuItem onClick={() => onCreateContent?.('json')}>JSON</MenuItem>
+                    <MenuItem onClick={() => onCreateContent?.('xml')}>XML</MenuItem>
+                  </MenuList>
+                </MenuPopover>
+              </Menu>
+            </MenuList>
+          </MenuPopover>
+        </Menu>
 
         <Button
           icon={<ArrowSyncRegular />}

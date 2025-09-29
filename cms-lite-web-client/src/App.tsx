@@ -3,14 +3,12 @@ import { FluentProvider, teamsLightTheme } from '@fluentui/react-components'
 import { AuthProvider } from './contexts'
 import { ProtectedRoute } from './components'
 import { SignIn, Dashboard, JsonViewer } from './pages'
-import store from './store/store'
 import './App.css'
 import { useEffect } from 'react'
 
 function App() {
   useEffect(() => {
     console.log('REACT_READY');
-    console.log('Initial Redux state:', store.getState());
   }, [])
   return (
     <FluentProvider theme={teamsLightTheme}>

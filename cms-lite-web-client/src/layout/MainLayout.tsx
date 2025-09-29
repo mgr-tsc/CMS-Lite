@@ -119,11 +119,6 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
     console.log('Refreshing content...')
   }
 
-  const handleViewAll = () => {
-    console.log('Viewing all content...')
-    setSelectedItem(null)
-  }
-
   const handleToggleNavMenu = () => {
     setIsNavMenuCollapsed((prev) => !prev)
   }
@@ -157,13 +152,12 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
         >
           <ActionBar
             hasSelection={selectedFiles.length > 0}
-            onNewDirectory={handleNewContent}
+            onNewDirectory={handleNewDirectory}
             disableNewDirectory={false}
             onEditContent={handleEditContent}
             onDeleteContent={handleDeleteContent}
             onSeeDetails={handleSeeDetails}
             onRefresh={handleRefresh}
-            onViewAll={handleViewAll}
           />
         </div>
 
