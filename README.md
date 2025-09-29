@@ -397,6 +397,7 @@ Content-Type: application/json
 - **Duplicate Handling**: Automatically removes duplicate resource names
 - **Comprehensive Response**: Detailed information about all deleted resources
 - **Error Handling**: Detailed error messages for validation failures
+- **Request Limit**: Maximum 10 resources per bulk delete request
 
 #### 3. **Directory Management Examples**
 

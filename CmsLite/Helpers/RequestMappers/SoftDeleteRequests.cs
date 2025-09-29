@@ -6,7 +6,7 @@ public record SoftDeleteRequest
 {
     [Required]
     [MinLength(1, ErrorMessage = "At least one resource is required")]
-    [MaxLength(100, ErrorMessage = "Maximum 100 resources allowed per request")]
+    [MaxLength(10, ErrorMessage = "Maximum 10 resources allowed per request")]
     public List<string> Resources { get; init; } = new();
 }
 

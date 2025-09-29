@@ -109,6 +109,7 @@ interface SoftDeleteState {
     items: SoftDeleteItem[]
     isSubmitting: boolean
     error: string | null
+    successMessage: string | null
 }
 
 const findDirectoryPathSegments = (root: DirectoryNode | null, targetId: string | null): string[] => {
@@ -151,6 +152,10 @@ const appendPathSegment = (basePath: string, segment: string): string => {
     return `${basePath}/${trimmedSegment}`
 }
 
+const delay = (ms: number) => new Promise<void>((resolve) => {
+    setTimeout(resolve, ms)
+})
+
 export const AppLayout = ({children}: AppLayoutProps) => {
     const styles = useStyles()
     const dispatch = useDispatch<AppDispatch>()
@@ -186,6 +191,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         items: [],
         isSubmitting: false,
         error: null,
+        successMessage: null,
     })
 
     useEffect(() => {
@@ -264,26 +270,6 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         }
     }
 
-    const handleDirectoryNameChange = (value: string) => {
-        setCreateDirectoryState(prev => ({
-            ...prev,
-            name: value,
-            error: null,
-        }))
-    }
-
-    const handleCancelCreateDirectory = () => {
-        if (createDirectoryState.isSubmitting) {
-            return
-        }
-        setCreateDirectoryState({
-            open: false,
-            name: '',
-            isSubmitting: false,
-            error: null,
-        })
-    }
-
     const handleDeleteContent = () => {
         if (!effectiveDirectory || selectedFiles.length === 0) {
             return
@@ -297,6 +283,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 id: item.id,
                 name: item.resource,
                 path: appendPathSegment(parentPath, item.resource),
+                resource: item.resource,
             }))
 
         if (items.length === 0) {
@@ -308,6 +295,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             items,
             isSubmitting: false,
             error: null,
+            successMessage: null,
         })
     }
 
@@ -370,6 +358,26 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         }
         setDetailsState(prev => ({...prev, isLoading: true, error: null}))
         void loadFileDetails(tenantName, detailsState.resourceId)
+    }
+
+    const handleDirectoryNameChange = (value: string) => {
+        setCreateDirectoryState(prev => ({
+            ...prev,
+            name: value,
+            error: null,
+        }))
+    }
+
+    const handleCancelCreateDirectory = () => {
+        if (createDirectoryState.isSubmitting) {
+            return
+        }
+        setCreateDirectoryState({
+            open: false,
+            name: '',
+            isSubmitting: false,
+            error: null,
+        })
     }
 
     const handleSubmitCreateDirectory = async () => {
@@ -459,17 +467,69 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             items: [],
             isSubmitting: false,
             error: null,
+            successMessage: null,
         })
     }
 
-    const handleConfirmSoftDelete = () => {
-        console.log('Soft delete requested for:', softDeleteState.items.map((item) => item.id))
-        setSoftDeleteState({
-            open: false,
-            items: [],
-            isSubmitting: false,
+    const handleConfirmSoftDelete = async () => {
+        const tenantName = user?.tenant?.name
+        if (!tenantName || softDeleteState.items.length === 0) {
+            return
+        }
+
+        setSoftDeleteState(prev => ({
+            ...prev,
+            isSubmitting: true,
             error: null,
-        })
+        }))
+
+        try {
+            await delay(2000)
+
+            const resources = softDeleteState.items.map((item) => item.resource)
+            await customAxios.delete(`/v1/${tenantName}/bulk-delete`, {
+                data: {
+                    resources,
+                },
+            })
+
+            const removedCount = resources.length
+
+            setSoftDeleteState({
+                open: true,
+                items: [],
+                isSubmitting: false,
+                error: null,
+                successMessage: `${removedCount} file${removedCount === 1 ? '' : 's'} successfully removed.`,
+            })
+
+            setSelectedFiles([])
+
+            if (rootDirectory?.id) {
+                dispatch(setCurrentDirectory(rootDirectory.id))
+            }
+
+            await dispatch(fetchDirectoryTree(tenantName))
+        } catch (error: unknown) {
+            let message = 'Failed to delete selected items.'
+            if (isAxiosError(error)) {
+                const apiMessage = (error.response?.data as { message?: string } | undefined)?.message
+                if (apiMessage) {
+                    message = apiMessage
+                } else if (error.message) {
+                    message = error.message
+                }
+            } else if (error instanceof Error) {
+                message = error.message
+            }
+
+            setSoftDeleteState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                error: message,
+                successMessage: null,
+            }))
+        }
     }
 
     const handleOpenJsonViewer = (resourceId: string, details: ContentItemDetails | null) => {
@@ -586,6 +646,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 items={softDeleteState.items}
                 isSubmitting={softDeleteState.isSubmitting}
                 errorMessage={softDeleteState.error}
+                successMessage={softDeleteState.successMessage}
                 onCancel={handleCancelSoftDelete}
                 onConfirm={handleConfirmSoftDelete}
             />

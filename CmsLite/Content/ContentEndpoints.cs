@@ -337,28 +337,16 @@ public static class ContentEndpoints
         // DELETE /v1/{tenant}/bulk-delete - Bulk soft delete content
         contentGroup.MapDelete("/{tenant}/bulk-delete", async (
             string tenant,
-            HttpRequest request,
+            HttpRequest request, // NOTE: Using HttpRequest instead of SoftDeleteRequest model binding
+                                // due to .NET 8 Minimal API limitation with DELETE + request body + authorization.
+                                // Direct model binding causes authorization middleware conflicts on DELETE endpoints.
             CmsLiteDbContext db,
             IDirectoryRepo directoryRepo) =>
         {
             tenant = tenant.Trim();
 
-            // Read and parse JSON request body manually
-            SoftDeleteRequest? deleteRequest;
-            try
-            {
-                deleteRequest = await request.ReadFromJsonAsync<SoftDeleteRequest>();
-            }
-            catch (Exception)
-            {
-                return Results.BadRequest(new SoftDeleteErrorResponse
-                {
-                    Error = "BadRequest",
-                    Details = "Invalid JSON request body",
-                    ValidationFailure = "Failed to parse request JSON"
-                });
-            }
-
+            // Read and parse JSON request body manually (see comment above for why)
+            var deleteRequest = await request.ReadFromJsonAsync<SoftDeleteRequest>();
             if (deleteRequest == null)
             {
                 return Results.BadRequest(new SoftDeleteErrorResponse
@@ -498,7 +486,7 @@ public static class ContentEndpoints
         }).RequireAuthorization()
         .WithName("BulkDeleteContent")
         .WithSummary("Bulk soft delete multiple content resources")
-        .WithDescription("Soft delete multiple content resources in a single atomic transaction. All resources must belong to the same directory and tenant. Features: atomic operations, same directory validation, duplicate handling, comprehensive response, and transaction rollback on any failure. Supports up to 100 resources per request.");
+        .WithDescription("Soft delete multiple content resources in a single atomic transaction. All resources must belong to the same directory and tenant. Features: atomic operations, same directory validation, duplicate handling, comprehensive response, and transaction rollback on any failure. Supports up to 10 resources per request.");
 
         // GET /v1/{tenant}/{resource}/versions - List content versions
         contentGroup.MapGet("/{tenant}/{resource}/versions", async (
