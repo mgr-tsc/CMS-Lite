@@ -19,14 +19,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const userState = useSelector((state: RootState) => state.user)
     useEffect(() => {
         // TEMPORARY: Bypass authentication for development/testing
-        dispatch(logInUser({
-            id: 'temp-user-id',
-            email: 'admin@email.com',
-            firstName: 'Admin',
-            lastName: 'User',
-            tenant: 'demo-tenant',
-        }));
-        setIsLoading(false);
+        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+            dispatch(logInUser({
+                id: 'temp-user-id',
+                email: 'admin@email.com',
+                firstName: 'Admin',
+                lastName: 'User',
+                tenant: 'demo-tenant',
+            }));
+            setIsLoading(false);
+        }
     }, [dispatch])
 
     const login = async (email: string, password: string): Promise<boolean> => {
