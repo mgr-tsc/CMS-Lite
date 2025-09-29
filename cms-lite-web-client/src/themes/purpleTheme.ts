@@ -1,4 +1,5 @@
-import { webLightTheme, Theme } from '@fluentui/react-components';
+import { webLightTheme  } from '@fluentui/react-components';
+import type { Theme } from '@fluentui/react-components';
 
 export const purpleTheme: Theme = {
   ...webLightTheme,
