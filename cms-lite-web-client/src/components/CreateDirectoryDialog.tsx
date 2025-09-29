@@ -22,6 +22,11 @@ const useStyles = makeStyles({
         flexDirection: 'column',
         gap: tokens.spacingVerticalM,
     },
+    inputGroup: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: tokens.spacingVerticalXS,
+    },
     pathHint: {
         color: tokens.colorNeutralForeground3,
     },
@@ -71,7 +76,7 @@ export const CreateDirectoryDialog = ({
                     <DialogTitle>Create new directory</DialogTitle>
                     <DialogContent>
                         <form className={styles.form} onSubmit={handleSubmit}>
-                            <div>
+                            <div className={styles.inputGroup}>
                                 <Label htmlFor="new-directory-name">Directory name</Label>
                                 <Input
                                     id="new-directory-name"
@@ -83,7 +88,7 @@ export const CreateDirectoryDialog = ({
                                 />
                             </div>
 
-                            <div>
+                            <div className={styles.inputGroup}>
                                 <Label>Location</Label>
                                 <Caption1 className={styles.pathHint}>{parentPath}</Caption1>
                             </div>
