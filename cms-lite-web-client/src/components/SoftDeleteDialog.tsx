@@ -71,9 +71,6 @@ export const SoftDeleteDialog = ({
                 if (isSubmitting) {
                     return
                 }
-                if (isSubmitting) {
-                    return
-                }
                 if (!data.open) {
                     onCancel()
                 }
