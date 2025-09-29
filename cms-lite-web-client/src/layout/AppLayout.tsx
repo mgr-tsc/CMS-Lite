@@ -111,7 +111,6 @@ interface SoftDeleteState {
     error: string | null
     successMessage: string | null
 }
-
 const findDirectoryPathSegments = (root: DirectoryNode | null, targetId: string | null): string[] => {
     if (!root || !targetId) {
         return []
@@ -154,8 +153,7 @@ const appendPathSegment = (basePath: string, segment: string): string => {
 
 const delay = (ms: number) => new Promise<void>((resolve) => {
     setTimeout(resolve, ms)
-})
-
+});
 export const AppLayout = ({children}: AppLayoutProps) => {
     const styles = useStyles()
     const dispatch = useDispatch<AppDispatch>()
@@ -193,7 +191,6 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         error: null,
         successMessage: null,
     })
-
     useEffect(() => {
         const tenantName = user?.tenant?.name
         if (!isAuthenticated || !tenantName) {
@@ -297,6 +294,104 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             error: null,
             successMessage: null,
         })
+    }
+
+    const handleDirectoryNameChange = (value: string) => {
+        setCreateDirectoryState(prev => ({
+            ...prev,
+            name: value,
+            error: null,
+        }))
+    }
+
+    const handleCancelCreateDirectory = () => {
+        if (createDirectoryState.isSubmitting) {
+            return
+        }
+        setCreateDirectoryState({
+            open: false,
+            name: '',
+            isSubmitting: false,
+            error: null,
+        })
+    }
+
+    const handleSubmitCreateDirectory = async () => {
+        const tenantName = user?.tenant?.name
+        const parentDirectory = effectiveDirectory
+
+        if (!tenantName || !parentDirectory) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: 'Missing tenant or directory context. Please try again.',
+            }))
+            return
+        }
+
+        const trimmedName = createDirectoryState.name.trim()
+        if (!trimmedName) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: 'Directory name is required.',
+            }))
+            return
+        }
+
+        const hasDuplicate = parentDirectory.subDirectories.some(
+            (directory) => directory.name.toLowerCase() === trimmedName.toLowerCase(),
+        )
+
+        if (hasDuplicate) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: `A directory named "${trimmedName}" already exists here.`,
+            }))
+            return
+        }
+
+        setCreateDirectoryState(prev => ({
+            ...prev,
+            isSubmitting: true,
+            error: null,
+        }))
+
+        try {
+            await customAxios.post(`/v1/${tenantName}/directories`, {
+                name: trimmedName,
+                parentId: parentDirectory.id,
+            })
+
+            setCreateDirectoryState({
+                open: false,
+                name: '',
+                isSubmitting: false,
+                error: null,
+            })
+
+            await dispatch(fetchDirectoryTree(tenantName))
+        } catch (error) {
+            let message = 'Failed to create directory.'
+            if (isAxiosError(error)) {
+                if (error.response?.status === 409) {
+                    message = `A directory named "${trimmedName}" already exists here.`
+                } else if (error.response?.data && typeof error.response.data === 'object') {
+                    const dataMessage = (error.response.data as { message?: string }).message
+                    if (dataMessage) {
+                        message = dataMessage
+                    }
+                } else if (error.message) {
+                    message = error.message
+                }
+            } else if (error instanceof Error) {
+                message = error.message
+            }
+
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                error: message,
+            }))
+        }
     }
 
     const loadFileDetails = useCallback(async (tenantName: string, resourceId: string) => {
@@ -640,7 +735,6 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 onCancel={handleCancelCreateDirectory}
                 onSubmit={handleSubmitCreateDirectory}
             />
-
             <SoftDeleteDialog
                 open={softDeleteState.open}
                 items={softDeleteState.items}
@@ -650,7 +744,6 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 onCancel={handleCancelSoftDelete}
                 onConfirm={handleConfirmSoftDelete}
             />
-
             <FileDetailsModal
                 open={detailsState.open}
                 details={detailsState.data}

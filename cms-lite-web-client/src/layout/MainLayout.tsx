@@ -157,7 +157,7 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
         >
           <ActionBar
             hasSelection={selectedFiles.length > 0}
-            onNewDirectory={handleNewDirectory}
+            onNewDirectory={handleNewContent}
             disableNewDirectory={false}
             onEditContent={handleEditContent}
             onDeleteContent={handleDeleteContent}
