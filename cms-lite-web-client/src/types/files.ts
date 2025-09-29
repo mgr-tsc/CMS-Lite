@@ -1,3 +1,4 @@
+//TODO: Check if this is still needed remove if not
 export interface FileNode {
     id: string
     parentDirectoryId: string
@@ -7,6 +8,8 @@ export interface FileNode {
     isVisible: boolean
 }
 
+
+//TODO: Check if this is still needed remove if not
 export interface FileListByDirectoryApiResponse {
     directory: null;
     contentItems: FileNodeV2[];
@@ -14,6 +17,7 @@ export interface FileListByDirectoryApiResponse {
     nextCursor: string | null;
 }
 
+//TODO: Check if this is still needed remove if not
 export interface FileNodeV2 {
     id: string;
     name: string;

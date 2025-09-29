@@ -114,7 +114,8 @@ curl -X POST http://localhost:8080/auth/refresh \
   - *Optional header*: `X-Directory-Id: {directoryId}` (if not provided, uses root directory)
 - **GET /v1/{tenant}/{resource}** → Retrieve content (latest or specific version)
 - **HEAD /v1/{tenant}/{resource}** → Get metadata without content body
-- **DELETE /v1/{tenant}/{resource}** → Soft delete content
+- **DELETE /v1/{tenant}/{resource}** → Soft delete single content resource
+- **DELETE /v1/{tenant}/bulk-delete** → **Bulk soft delete multiple content resources** (atomic transaction)
 - **GET /v1/{tenant}** → List tenant resources (with filtering/pagination)
 - **GET /v1/{tenant}/{resource}/versions** → List all versions of resource
 - **GET /v1/{tenant}/{resource}/details** → Get comprehensive resource details with version history and directory info
@@ -338,13 +339,64 @@ GET http://localhost:8080/v1/acme/config?version=1
 Authorization: Bearer {your-jwt-token}
 ```
 
-**Soft Delete Content** (DELETE /v1/{tenant}/{resource}):
+**Soft Delete Single Content** (DELETE /v1/{tenant}/{resource}):
 ```bash
 DELETE http://localhost:8080/v1/acme/config
 Authorization: Bearer {your-jwt-token}
 
 # Response: 204 No Content
 ```
+
+**Bulk Soft Delete Content** (DELETE /v1/{tenant}/bulk-delete):
+```bash
+DELETE http://localhost:8080/v1/acme/bulk-delete
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+
+{
+  "resources": ["config", "settings", "homepage"]
+}
+
+# Response (200 OK):
+{
+  "tenantId": "acme-tenant-id",
+  "tenantName": "acme",
+  "directoryId": "root-directory-id",
+  "directoryPath": "/",
+  "deletedCount": 3,
+  "deletedResources": [
+    {
+      "resource": "config",
+      "latestVersion": 2,
+      "contentType": "application/json",
+      "size": "145 bytes",
+      "originalCreatedAtUtc": "2024-01-01T12:00:00Z"
+    },
+    {
+      "resource": "settings",
+      "latestVersion": 1,
+      "contentType": "application/json",
+      "size": "1.2 KB",
+      "originalCreatedAtUtc": "2024-01-01T12:15:00Z"
+    },
+    {
+      "resource": "homepage",
+      "latestVersion": 3,
+      "contentType": "application/json",
+      "size": "2.1 KB",
+      "originalCreatedAtUtc": "2024-01-01T12:30:00Z"
+    }
+  ],
+  "deletedAtUtc": "2024-01-01T13:00:00Z"
+}
+```
+
+**Bulk Delete Features:**
+- **Atomic Operations**: All resources deleted together or none at all
+- **Same Directory Validation**: All resources must be in the same directory
+- **Duplicate Handling**: Automatically removes duplicate resource names
+- **Comprehensive Response**: Detailed information about all deleted resources
+- **Error Handling**: Detailed error messages for validation failures
 
 #### 3. **Directory Management Examples**
 
@@ -626,6 +678,63 @@ If-Match: wrong-etag
 # Expected: 412 Precondition Failed
 ```
 
+**Bulk Delete Error Scenarios**:
+
+**Cross-Directory Bulk Delete** (Resources in different directories):
+```bash
+DELETE http://localhost:8080/v1/acme/bulk-delete
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+
+{
+  "resources": ["root-file", "subdirectory-file"]
+}
+
+# Expected: 400 Bad Request
+{
+  "error": "BadRequest",
+  "details": "All resources must belong to the same directory",
+  "validationFailure": "Resources span across 2 different directories"
+}
+```
+
+**Non-existent Resources**:
+```bash
+DELETE http://localhost:8080/v1/acme/bulk-delete
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+
+{
+  "resources": ["non-existent1", "non-existent2"]
+}
+
+# Expected: 400 Bad Request
+{
+  "error": "NotFound",
+  "details": "Some resources were not found or already deleted",
+  "failedResources": ["non-existent1", "non-existent2"],
+  "validationFailure": "Missing resources: non-existent1, non-existent2"
+}
+```
+
+**Empty Resources List**:
+```bash
+DELETE http://localhost:8080/v1/acme/bulk-delete
+Authorization: Bearer {your-jwt-token}
+Content-Type: application/json
+
+{
+  "resources": []
+}
+
+# Expected: 400 Bad Request
+{
+  "error": "BadRequest",
+  "details": "At least one resource is required",
+  "validationFailure": "Empty resources list"
+}
+```
+
 #### 6. **Logout & Token Management**
 
 **Logout** (POST /auth/logout):
@@ -847,12 +956,13 @@ dotnet test --logger "console;verbosity=detailed"
 - **📂 Directory Management**: Hierarchical organization with 5-level nesting and security
 - **🌲 Full Directory Tree API**: Single endpoint returns complete hierarchical structure with all content
 - **📋 Content Details API**: Comprehensive resource information with version history and directory context
-- **⚖️ Transactional Consistency**: Compensation pattern for blob/database operations
+- **🗑️ Bulk Soft Delete API**: Atomic bulk deletion with same-directory validation and comprehensive error handling
+- **⚖️ Transactional Consistency**: Compensation pattern for blob/database operations with atomic bulk operations
 - **🛡️ Enhanced Security**: Directory validation, tenant isolation, root protection
 - **🎨 React Frontend**: Responsive UI with authentication integration
 - **🗄️ Database Schema**: Optimized relationships with directory support
 - **🛡️ Security Middleware**: Authentication and tenant validation
-- **🧪 Comprehensive Testing**: 45+ tests including new endpoint coverage
+- **🧪 Comprehensive Testing**: 59 tests including bulk delete endpoint coverage
 - **🐳 Docker Environment**: Full development containerization
 - **📚 OpenAPI Documentation**: Swagger UI with JWT authentication support
 

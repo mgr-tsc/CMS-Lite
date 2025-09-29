@@ -93,8 +93,8 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
     setSelectedFiles(fileIds)
   }
 
-  const handleNewContent = () => {
-    console.log('Creating new content...')
+  const handleNewDirectory = () => {
+    console.log('Creating new directory...')
   }
 
   const handleEditContent = () => {
@@ -157,7 +157,8 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
         >
           <ActionBar
             hasSelection={selectedFiles.length > 0}
-            onNewContent={handleNewContent}
+            onNewDirectory={handleNewDirectory}
+            disableNewDirectory={false}
             onEditContent={handleEditContent}
             onDeleteContent={handleDeleteContent}
             onSeeDetails={handleSeeDetails}
