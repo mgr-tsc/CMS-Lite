@@ -97,10 +97,12 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
     console.log('Creating new directory...')
   }
 
-  const handleEditContent = () => {
-    if (selectedItem) {
-      console.log('Editing content:', selectedItem.name)
-    }
+  const handleImportContent = (type: 'json' | 'xml') => {
+    console.log(`Import ${type.toUpperCase()} content...`)
+  }
+
+  const handleCreateContent = (type: 'json' | 'xml') => {
+    console.log(`Create ${type.toUpperCase()} content...`)
   }
 
   const handleDeleteContent = () => {
@@ -154,7 +156,10 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
             hasSelection={selectedFiles.length > 0}
             onNewDirectory={handleNewDirectory}
             disableNewDirectory={false}
-            onEditContent={handleEditContent}
+            onImportContent={handleImportContent}
+            onCreateContent={handleCreateContent}
+            disableImportContent={false}
+            disableCreateContent={false}
             onDeleteContent={handleDeleteContent}
             onSeeDetails={handleSeeDetails}
             onRefresh={handleRefresh}

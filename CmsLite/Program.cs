@@ -5,9 +5,11 @@ using CmsLite.Database;
 using CmsLite.Authentication;
 using CmsLite.Content;
 using CmsLite.Helpers.RequestMappers;
+using CmsLite.Monitoring;
 using Microsoft.OpenApi.Models;
 using CmsLite.Middlewares;
 using System.Text.Json;
+using CmsLite.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +33,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.AddCmsLiteAuthentication();
 builder.AddCmsRepositories();
 builder.AddLoggingServices();
+builder.AddCmsRateLimiting();
 
 // Add Swagger/OpenAPI services
 builder.Services.AddEndpointsApiExplorer();
@@ -122,7 +125,7 @@ app.MapPost("/attach-user", async (SignUpRequest request, IUserRepo userRepo, IT
         lastName = request.LastName,
         tenantId = request.TenantId
     });
-}).RequireAuthorization().WithDescription("Attach a new user to an existing tenant.").WithTags("SignUp");
+}).RequireAuthorization().WithDescription("Attach a new user to an existing tenant.").WithTags("SignUp").RequireRateLimiting("admin");
 
 app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo tenantRepo, IUserRepo userRepo, IDirectoryRepo directoryRepo, CmsLiteDbContext dbContext) =>
 {
@@ -174,7 +177,7 @@ app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo te
         await transaction.RollbackAsync();
         throw;
     }
-}).WithDescription("Create a new tenant along with its owner user.").WithTags("SignUp");
+}).WithDescription("Create a new tenant along with its owner user.").WithTags("SignUp").RequireRateLimiting("admin");
 
 // Initialize database
 using (var scope = app.Services.CreateScope())
@@ -210,6 +213,7 @@ else
 }
 
 app.UseCmsLiteAuthentication();
+app.UseRateLimiter();
 app.MapAuthenticationEndpoints();
 app.MapContentEndpoints();
 app.MapDirectoryEndpoints();

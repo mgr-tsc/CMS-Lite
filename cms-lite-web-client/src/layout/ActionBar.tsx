@@ -1,10 +1,19 @@
-import { Button, makeStyles, tokens, Menu, MenuTrigger, MenuPopover, MenuList, MenuItem } from '@fluentui/react-components'
+import {
+  Button,
+  Menu,
+  MenuTrigger,
+  MenuPopover,
+  MenuList,
+  MenuItem,
+  makeStyles,
+  tokens,
+} from '@fluentui/react-components'
 import {
   FolderAddRegular,
-  EditRegular,
+  ArrowImportRegular,
+  AddRegular,
   DeleteRegular,
   EyeRegular,
-  DocumentRegular,
   ArrowSyncRegular,
 } from '@fluentui/react-icons'
 import { ACTION_BAR, BREAKPOINTS } from './layoutConstants'
@@ -51,7 +60,8 @@ interface ActionBarProps {
   disableNewDirectory?: boolean
   onImportContent?: (type: 'json' | 'xml') => void
   onCreateContent?: (type: 'json' | 'xml') => void
-  onEditContent?: () => void
+  disableImportContent?: boolean
+  disableCreateContent?: boolean
   onDeleteContent?: () => void
   onSeeDetails?: () => void
   onRefresh?: () => void
@@ -63,7 +73,8 @@ export const ActionBar = ({
   disableNewDirectory,
   onImportContent,
   onCreateContent,
-  onEditContent,
+  disableImportContent,
+  disableCreateContent,
   onDeleteContent,
   onSeeDetails,
   onRefresh,
@@ -83,33 +94,37 @@ export const ActionBar = ({
         </Button>
 
         <Menu>
-          <MenuTrigger>
-            <Button icon={<DocumentRegular />}>Content Actions</Button>
+          <MenuTrigger disableButtonEnhancement>
+            <Button
+              appearance="primary"
+              icon={<ArrowImportRegular />}
+              disabled={disableImportContent}
+            >
+              Import
+            </Button>
           </MenuTrigger>
           <MenuPopover>
             <MenuList>
-              <Menu>
-                <MenuTrigger>
-                  <MenuItem>Import</MenuItem>
-                </MenuTrigger>
-                <MenuPopover>
-                  <MenuList>
-                    <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
-                    <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
-                  </MenuList>
-                </MenuPopover>
-              </Menu>
-              <Menu>
-                <MenuTrigger>
-                  <MenuItem>Create</MenuItem>
-                </MenuTrigger>
-                <MenuPopover>
-                  <MenuList>
-                    <MenuItem onClick={() => onCreateContent?.('json')}>JSON</MenuItem>
-                    <MenuItem onClick={() => onCreateContent?.('xml')}>XML</MenuItem>
-                  </MenuList>
-                </MenuPopover>
-              </Menu>
+              <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
+              <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
+            </MenuList>
+          </MenuPopover>
+        </Menu>
+
+        <Menu>
+          <MenuTrigger disableButtonEnhancement>
+            <Button
+              appearance="primary"
+              icon={<AddRegular />}
+              disabled={disableCreateContent}
+            >
+              Create
+            </Button>
+          </MenuTrigger>
+          <MenuPopover>
+            <MenuList>
+              <MenuItem onClick={() => onCreateContent?.('json')}>JSON</MenuItem>
+              <MenuItem onClick={() => onCreateContent?.('xml')}>XML</MenuItem>
             </MenuList>
           </MenuPopover>
         </Menu>
@@ -129,14 +144,6 @@ export const ActionBar = ({
           onClick={onSeeDetails}
         >
           See Details
-        </Button>
-
-        <Button
-          icon={<EditRegular />}
-          disabled={!hasSelection}
-          onClick={onEditContent}
-        >
-          Edit
         </Button>
 
         <Button

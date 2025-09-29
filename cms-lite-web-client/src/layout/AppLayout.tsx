@@ -29,6 +29,7 @@ import {
 import {FileDetailsModal} from '../components/FileDetailsModal'
 import {CreateDirectoryDialog} from '../components/CreateDirectoryDialog'
 import {SoftDeleteDialog, type SoftDeleteItem} from '../components/SoftDeleteDialog'
+import {InfoDialog} from '../components/modals/InfoDialog'
 import customAxios from '../utilities/custom-axios'
 import type {ContentItemDetails} from '../types/content'
 
@@ -110,6 +111,14 @@ interface SoftDeleteState {
     isSubmitting: boolean
     error: string | null
     successMessage: string | null
+}
+
+interface InfoDialogState {
+    open: boolean
+    title: string
+    description: string
+    primaryLabel?: string
+    isLoading?: boolean
 }
 const findDirectoryPathSegments = (root: DirectoryNode | null, targetId: string | null): string[] => {
     if (!root || !targetId) {
@@ -194,6 +203,14 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     const importFileInputRef = useRef<HTMLInputElement | null>(null)
     const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | null>(null)
     const [importAccept, setImportAccept] = useState('')
+    const [isImporting, setIsImporting] = useState(false)
+    const [infoDialogState, setInfoDialogState] = useState<InfoDialogState>({
+        open: false,
+        title: 'Coming soon',
+        description: 'This feature is under construction. Check back again shortly.',
+        primaryLabel: 'Close',
+        isLoading: false,
+    })
     useEffect(() => {
         const tenantName = user?.tenant?.name
         if (!isAuthenticated || !tenantName) {
@@ -265,6 +282,10 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     }
 
     const handleImportContent = (type: 'json' | 'xml') => {
+        if (!effectiveDirectory || !user?.tenant?.name) {
+            return
+        }
+
         const accept = type === 'json' ? 'application/json,.json' : 'application/xml,text/xml,.xml'
         setPendingImportType(type)
         setImportAccept(accept)
@@ -274,13 +295,13 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     }
 
     const handleCreateContent = (type: 'json' | 'xml') => {
-        console.log(`Create ${type.toUpperCase()} content flow not yet implemented.`)
-    }
-
-    const handleEditContent = () => {
-        if (selectedFiles.length > 0) {
-            console.log('Editing content:', selectedFiles)
-        }
+        setInfoDialogState({
+            open: true,
+            title: `${type.toUpperCase()} creation coming soon`,
+            description: 'Authoring new content directly from the dashboard is on the roadmap.',
+            primaryLabel: 'Close',
+            isLoading: false,
+        })
     }
 
     const handleDeleteContent = () => {
@@ -480,41 +501,156 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             return
         }
 
+        if (!effectiveDirectory || !user?.tenant?.name) {
+            setPendingImportType(null)
+            return
+        }
+
+        const tenantName = user.tenant.name
+
+        const targetPath = appendPathSegment(parentPathDisplay, file.name)
+
         if (pendingImportType === 'json') {
             const reader = new FileReader()
             reader.onload = () => {
-                try {
-                    const text =
-                        typeof reader.result === 'string'
-                            ? reader.result
-                            : new TextDecoder().decode(reader.result as ArrayBuffer)
-                    JSON.parse(text)
-                    setPendingImportType(null)
-                    navigate('/tools/json-viewer', {
-                        state: {
-                            rawJson: text,
-                            resourceId: file.name,
-                            tenantName: user?.tenant?.name,
-                        },
-                    })
-                } catch (error) {
-                    console.error('Failed to parse JSON file', error)
-                    alert('Unable to read the selected JSON file. Please verify the content.')
-                    setPendingImportType(null)
-                }
+                void (async () => {
+                    try {
+                        const text =
+                            typeof reader.result === 'string'
+                                ? reader.result
+                                : new TextDecoder().decode(reader.result as ArrayBuffer)
+
+                        JSON.parse(text)
+                        const resourceName = file.name.replace(/\.json$/i, '') || file.name
+
+                        await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Directory-Id': effectiveDirectory.id,
+                            },
+                        })
+
+                        await dispatch(fetchDirectoryTree(tenantName))
+
+                        setInfoDialogState({
+                            open: true,
+                            title: 'Import complete',
+                            description: `File "${file.name}" imported successfully to ${targetPath}.`,
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                    } catch (error) {
+                        console.error('Failed to import JSON file', error)
+                        setInfoDialogState({
+                            open: true,
+                            title: 'JSON upload failed',
+                            description: 'There was a problem uploading the file. Please verify the contents and try again.',
+                            primaryLabel: 'Close',
+                        })
+                        setInfoDialogState(prev => ({
+                            ...prev,
+                            isLoading: false,
+                        }))
+                    } finally {
+                        setIsImporting(false)
+                        setPendingImportType(null)
+                    }
+                })()
             }
             reader.onerror = () => {
                 console.error('Failed to read JSON file', reader.error)
-                alert('Unable to read the selected JSON file. Please try again.')
+                setInfoDialogState({
+                    open: true,
+                    title: 'File read error',
+                    description: 'Unable to read the selected JSON file. Please try again.',
+                    primaryLabel: 'Close',
+                    isLoading: false,
+                })
+                setIsImporting(false)
                 setPendingImportType(null)
             }
+            setIsImporting(true)
+            setInfoDialogState({
+                open: true,
+                title: 'Importing JSON',
+                description: `Uploading "${file.name}"...`,
+                primaryLabel: 'Close',
+                isLoading: true,
+            })
             reader.readAsText(file)
             return
         }
 
         if (pendingImportType === 'xml') {
-            setPendingImportType(null)
-            alert('XML import flow is not implemented yet.')
+            const reader = new FileReader()
+            reader.onload = () => {
+                void (async () => {
+                    try {
+                        const text =
+                            typeof reader.result === 'string'
+                                ? reader.result
+                                : new TextDecoder().decode(reader.result as ArrayBuffer)
+
+                        const parser = new DOMParser()
+                        const parsedDoc = parser.parseFromString(text, 'application/xml')
+                        if (parsedDoc.getElementsByTagName('parsererror').length > 0) {
+                            throw new Error('Invalid XML format')
+                        }
+
+                        const resourceName = file.name.replace(/\.xml$/i, '') || file.name
+
+                        await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
+                            headers: {
+                                'Content-Type': 'application/xml',
+                                'X-Directory-Id': effectiveDirectory.id,
+                            },
+                        })
+
+                        await dispatch(fetchDirectoryTree(tenantName))
+
+                        setInfoDialogState({
+                            open: true,
+                            title: 'Import complete',
+                            description: `File "${file.name}" imported successfully to ${targetPath}.`,
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                    } catch (error) {
+                        console.error('Failed to import XML file', error)
+                        setInfoDialogState({
+                            open: true,
+                            title: 'XML upload failed',
+                            description: 'There was a problem uploading the XML file. Please verify the contents and try again.',
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                    } finally {
+                        setIsImporting(false)
+                        setPendingImportType(null)
+                    }
+                })()
+            }
+            reader.onerror = () => {
+                console.error('Failed to read XML file', reader.error)
+                setInfoDialogState({
+                    open: true,
+                    title: 'File read error',
+                    description: 'Unable to read the selected XML file. Please try again.',
+                    primaryLabel: 'Close',
+                    isLoading: false,
+                })
+                setIsImporting(false)
+                setPendingImportType(null)
+            }
+            setIsImporting(true)
+            setInfoDialogState({
+                open: true,
+                title: 'Importing XML',
+                description: `Uploading "${file.name}"...`,
+                primaryLabel: 'Close',
+                isLoading: true,
+            })
+            reader.readAsText(file)
             return
         }
 
@@ -595,6 +731,10 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         }
     }
 
+    const handleDismissInfoDialog = () => {
+        setInfoDialogState(prev => ({ ...prev, open: false, isLoading: false }))
+    }
+
     const handleOpenJsonViewer = (resourceId: string, details: ContentItemDetails | null) => {
         if (!resourceId) {
             return
@@ -664,7 +804,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                             disableNewDirectory={!effectiveDirectory || !user?.tenant?.name}
                             onImportContent={handleImportContent}
                             onCreateContent={handleCreateContent}
-                            onEditContent={handleEditContent}
+                            disableImportContent={!effectiveDirectory || !user?.tenant?.name || isImporting}
+                            disableCreateContent={!user?.tenant?.name}
                             onDeleteContent={handleDeleteContent}
                             onSeeDetails={handleSeeDetails}
                             onRefresh={handleRefresh}
@@ -706,6 +847,14 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 successMessage={softDeleteState.successMessage}
                 onCancel={handleCancelSoftDelete}
                 onConfirm={handleConfirmSoftDelete}
+            />
+            <InfoDialog
+                open={infoDialogState.open}
+                title={infoDialogState.title}
+                description={infoDialogState.description}
+                primaryLabel={infoDialogState.primaryLabel}
+                isLoading={infoDialogState.isLoading}
+                onDismiss={handleDismissInfoDialog}
             />
             <input
                 type="file"

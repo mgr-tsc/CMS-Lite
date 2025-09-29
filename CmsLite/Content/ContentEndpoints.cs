@@ -180,7 +180,8 @@ public static class ContentEndpoints
         }).WithName("CreateOrUpdateContent")
         .RequireAuthorization()
         .WithSummary("Create or update content")
-        .WithDescription("Create new content or update existing content with versioning");
+        .WithDescription("Create new content or update existing content with versioning")
+        .RequireRateLimiting("content-write");
 
         // GET /v1/{tenant}/{resource} - Retrieve content
         contentGroup.MapGet("/{tenant}/{resource}", async (
@@ -215,7 +216,8 @@ public static class ContentEndpoints
         }).RequireAuthorization()
         .WithName("GetContent")
         .WithSummary("Retrieve content")
-        .WithDescription("Get content by tenant and resource, optionally specifying version");
+        .WithDescription("Get content by tenant and resource, optionally specifying version")
+        .RequireRateLimiting("content-read");
 
         // HEAD /v1/{tenant}/{resource} - Get content metadata
         contentGroup.MapMethods("/{tenant}/{resource}", new[] { HttpMethods.Head }, async (
@@ -251,7 +253,8 @@ public static class ContentEndpoints
         .RequireAuthorization()
         .WithName("GetContentMetadata")
         .WithSummary("Get content metadata")
-        .WithDescription("Get content metadata without downloading the content body");
+        .WithDescription("Get content metadata without downloading the content body")
+        .RequireRateLimiting("content-read");
 
         // GET /v1/{tenant} - List tenant resources
         contentGroup.MapGet("/{tenant}", async (
@@ -306,7 +309,8 @@ public static class ContentEndpoints
         })
         .WithName("ListTenantResources")
         .WithSummary("List tenant resources")
-        .WithDescription("List all resources for a tenant with optional filtering and pagination");
+        .WithDescription("List all resources for a tenant with optional filtering and pagination")
+        .RequireRateLimiting("content-read");
 
         // DELETE /v1/{tenant}/{resource} - Soft delete single content
         contentGroup.MapDelete("/{tenant}/{resource}", async (
@@ -332,7 +336,8 @@ public static class ContentEndpoints
         }).RequireAuthorization()
         .WithName("DeleteContent")
         .WithSummary("Soft delete content")
-        .WithDescription("Mark content as deleted (soft delete)");
+        .WithDescription("Mark content as deleted (soft delete)")
+        .RequireRateLimiting("content-write");
 
         // DELETE /v1/{tenant}/bulk-delete - Bulk soft delete content
         contentGroup.MapDelete("/{tenant}/bulk-delete", async (
@@ -486,7 +491,8 @@ public static class ContentEndpoints
         }).RequireAuthorization()
         .WithName("BulkDeleteContent")
         .WithSummary("Bulk soft delete multiple content resources")
-        .WithDescription("Soft delete multiple content resources in a single atomic transaction. All resources must belong to the same directory and tenant. Features: atomic operations, same directory validation, duplicate handling, comprehensive response, and transaction rollback on any failure. Supports up to 10 resources per request.");
+        .WithDescription("Soft delete multiple content resources in a single atomic transaction. All resources must belong to the same directory and tenant. Features: atomic operations, same directory validation, duplicate handling, comprehensive response, and transaction rollback on any failure. Supports up to 10 resources per request.")
+        .RequireRateLimiting("bulk-operations");
 
         // GET /v1/{tenant}/{resource}/versions - List content versions
         contentGroup.MapGet("/{tenant}/{resource}/versions", async (
@@ -517,7 +523,8 @@ public static class ContentEndpoints
         }).RequireAuthorization()
         .WithName("GetContentVersions")
         .WithSummary("List content versions")
-        .WithDescription("Get all versions of a specific content resource");
+        .WithDescription("Get all versions of a specific content resource")
+        .RequireRateLimiting("content-read");
 
         // GET /v1/{tenant}/{resource}/details - Get detailed content information
         contentGroup.MapGet("/{tenant}/{resource}/details", async (
@@ -552,7 +559,8 @@ public static class ContentEndpoints
         }).RequireAuthorization()
         .WithName("GetContentDetails")
         .WithSummary("Get detailed content information")
-        .WithDescription("Returns comprehensive details about a specific content resource including version history, directory info, and metadata");
+        .WithDescription("Returns comprehensive details about a specific content resource including version history, directory info, and metadata")
+        .RequireRateLimiting("content-read");
     }
 
     // Helper method to build directory full path

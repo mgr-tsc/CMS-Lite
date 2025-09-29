@@ -43,6 +43,7 @@ public static class DirectoryEndpoints
             }
         })
         .RequireAuthorization()
+        .RequireRateLimiting("content-read")
         .WithName("GetFullDirectoryTree")
         .WithSummary("Get complete directory tree with content items")
         .WithDescription("Returns the complete hierarchical directory structure with all content items for the tenant");
@@ -74,6 +75,7 @@ public static class DirectoryEndpoints
             return Results.Ok(new { directories = result, totalCount = result.Count });
         })
         .RequireAuthorization()
+        .RequireRateLimiting("content-read")
         .WithName("GetDirectoryTree")
         .WithSummary("Get directory tree for tenant")
         .WithDescription("Returns hierarchical directory structure for the authenticated user's tenant");
@@ -119,6 +121,7 @@ public static class DirectoryEndpoints
             return Results.Ok(result);
         })
         .RequireAuthorization()
+        .RequireRateLimiting("content-read")
         .WithName("GetDirectoryById")
         .WithSummary("Get directory by ID")
         .WithDescription("Returns detailed information about a specific directory");
@@ -188,6 +191,7 @@ public static class DirectoryEndpoints
             }
         })
         .RequireAuthorization()
+        .RequireRateLimiting("content-write")
         .WithName("CreateDirectory")
         .WithSummary("Create new directory")
         .WithDescription("Creates a new directory with optional parent directory");
@@ -262,6 +266,7 @@ public static class DirectoryEndpoints
             return Results.Ok(result);
         })
         .RequireAuthorization()
+        .RequireRateLimiting("content-read")
         .WithName("GetDirectoryContents")
         .WithSummary("Get directory contents")
         .WithDescription("Returns content items within a specific directory with pagination");
