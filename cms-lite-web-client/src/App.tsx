@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { FluentProvider, teamsLightTheme } from '@fluentui/react-components'
+import { FluentProvider } from '@fluentui/react-components'
 import { AuthProvider } from './contexts'
+// import { purpleTheme } from './themes/purpleTheme'
+import { teamsLightTheme } from "@fluentui/react-components";
 import { ProtectedRoute } from './components'
 import { SignIn, Dashboard, JsonViewer } from './pages'
 import './App.css'
