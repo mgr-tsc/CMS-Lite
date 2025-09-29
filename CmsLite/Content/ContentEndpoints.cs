@@ -303,7 +303,7 @@ public static class ContentEndpoints
             });
 
             return Results.Ok(new { items, nextCursor = next });
-        }).RequireAuthorization()
+        })
         .WithName("ListTenantResources")
         .WithSummary("List tenant resources")
         .WithDescription("List all resources for a tenant with optional filtering and pagination");
