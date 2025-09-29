@@ -97,10 +97,12 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
     console.log('Creating new directory...')
   }
 
-  const handleEditContent = () => {
-    if (selectedItem) {
-      console.log('Editing content:', selectedItem.name)
-    }
+  const handleImportContent = (type: 'json' | 'xml') => {
+    console.log(`Import ${type.toUpperCase()} content...`)
+  }
+
+  const handleCreateContent = (type: 'json' | 'xml') => {
+    console.log(`Create ${type.toUpperCase()} content...`)
   }
 
   const handleDeleteContent = () => {
@@ -117,11 +119,6 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
 
   const handleRefresh = () => {
     console.log('Refreshing content...')
-  }
-
-  const handleViewAll = () => {
-    console.log('Viewing all content...')
-    setSelectedItem(null)
   }
 
   const handleToggleNavMenu = () => {
@@ -157,13 +154,15 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
         >
           <ActionBar
             hasSelection={selectedFiles.length > 0}
-            onNewDirectory={handleNewContent}
+            onNewDirectory={handleNewDirectory}
             disableNewDirectory={false}
-            onEditContent={handleEditContent}
+            onImportContent={handleImportContent}
+            onCreateContent={handleCreateContent}
+            disableImportContent={false}
+            disableCreateContent={false}
             onDeleteContent={handleDeleteContent}
             onSeeDetails={handleSeeDetails}
             onRefresh={handleRefresh}
-            onViewAll={handleViewAll}
           />
         </div>
 

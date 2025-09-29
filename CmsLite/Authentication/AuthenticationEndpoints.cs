@@ -70,7 +70,8 @@ public static class AuthenticationEndpoints
             }
         }).WithName("Login")
         .WithSummary("User login")
-        .WithDescription("Authenticate user with email and password");
+        .WithDescription("Authenticate user with email and password")
+        .RequireRateLimiting("auth");
 
         // POST /auth/logout
         authGroup.MapPost("/logout", async (
@@ -98,7 +99,8 @@ public static class AuthenticationEndpoints
         }).RequireAuthorization()
         .WithName("Logout")
         .WithSummary("User logout")
-        .WithDescription("Revoke current user session");
+        .WithDescription("Revoke current user session")
+        .RequireRateLimiting("auth");
 
         // GET /auth/me
         authGroup.MapGet("/me", async (
@@ -142,7 +144,8 @@ public static class AuthenticationEndpoints
         }).RequireAuthorization()
         .WithName("GetCurrentUser")
         .WithSummary("Get current user")
-        .WithDescription("Get information about the currently authenticated user");
+        .WithDescription("Get information about the currently authenticated user")
+        .RequireRateLimiting("auth");
 
         // POST /auth/refresh
         authGroup.MapPost("/refresh", async (
@@ -179,6 +182,7 @@ public static class AuthenticationEndpoints
         }).RequireAuthorization()
         .WithName("RefreshToken")
         .WithSummary("Refresh authentication token")
-        .WithDescription("Generate a new token from an existing valid token");
+        .WithDescription("Generate a new token from an existing valid token")
+        .RequireRateLimiting("auth");
     }
 }
