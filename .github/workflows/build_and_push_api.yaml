@@ -28,7 +28,7 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}-api
-      DOCKER_CONTEXT: .
+      DOCKER_CONTEXT: ${{ github.workspace }}
       DOCKERFILE: ./docker/Dockerfile
 
     steps:
