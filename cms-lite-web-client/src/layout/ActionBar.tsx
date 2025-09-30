@@ -11,7 +11,6 @@ import {
 import {
   FolderAddRegular,
   ArrowImportRegular,
-  //AddRegular,
   DeleteRegular,
   EyeRegular,
   ArrowSyncRegular,
