@@ -1,4 +1,4 @@
-import { Text, makeStyles, tokens } from '@fluentui/react-components'
+import { Text, makeStyles, tokens, Link } from '@fluentui/react-components'
 
 const useStyles = makeStyles({
   footer: {
@@ -9,6 +9,13 @@ const useStyles = makeStyles({
     textAlign: 'center',
     marginTop: 'auto',
   },
+  links: {
+    marginTop: tokens.spacingVerticalS,
+    display: 'block',
+    '& a': {
+      margin: `0 ${tokens.spacingHorizontalS}`,
+    },
+  },
 })
 
 export const Footer = () => {
@@ -17,8 +24,15 @@ export const Footer = () => {
   return (
     <footer className={styles.footer}>
       <Text size={200}>
-        © 2024 CMS Lite - Lightweight Content Management System
+          © 2025 FileKeeper - Lightweight Content Management System. <span style={{fontWeight: 'bold'}}>An application of Timekeeper</span>. All rights reserved.
       </Text>
+      <div className={styles.links}>
+        <Link href="#">Privacy Policy</Link>
+        <Text> | </Text>
+        <Link href="#">Terms of Service</Link>
+        <Text> | </Text>
+        <Link href="#">Contact Us</Link>
+      </div>
     </footer>
   )
 }
