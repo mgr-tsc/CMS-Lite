@@ -240,6 +240,28 @@ const builderFromObject = (value: unknown) => {
   return builder.build(value)
 }
 
+const sanitizeXmlText = (value: string): string => {
+  const lines = value.split(/\r?\n/)
+  const sanitized: string[] = []
+  let previousBlank = false
+
+  lines.forEach((line) => {
+    const lineWithoutTrailing = line.replace(/\s+$/u, '')
+    const isBlank = lineWithoutTrailing.trim().length === 0
+    if (isBlank) {
+      if (!previousBlank && sanitized.length > 0) {
+        sanitized.push('')
+      }
+      previousBlank = true
+    } else {
+      sanitized.push(lineWithoutTrailing)
+      previousBlank = false
+    }
+  })
+
+  return sanitized.join('\n').trim()
+}
+
 const normalizeXmlPayload = (
   value: unknown,
   options?: { wrapRootName?: string },
@@ -248,11 +270,11 @@ const normalizeXmlPayload = (
     try {
       const parsed = parserFromString(value)
       const displayValue = ensureDisplayValue(parsed)
-      const formatted = builderFromObject(parsed)
+      const formatted = sanitizeXmlText(builderFromObject(parsed))
       return { parsed: displayValue, formatted }
     } catch (error) {
       console.warn('Failed to parse XML string; falling back to raw text.', error)
-      return { parsed: { value }, formatted: value }
+      return { parsed: { value }, formatted: sanitizeXmlText(value) }
     }
   }
 
@@ -262,7 +284,7 @@ const normalizeXmlPayload = (
       const formatted = builderFromObject(
         options?.wrapRootName ? { [options.wrapRootName]: value } : value,
       )
-      return { parsed: displayValue, formatted }
+      return { parsed: displayValue, formatted: sanitizeXmlText(formatted) }
     } catch (error) {
       console.warn('Failed to convert object to XML; falling back to string representation.', error)
       return { parsed: displayValue, formatted: JSON.stringify(value, null, 2) }

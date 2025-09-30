@@ -37,7 +37,7 @@ import { ArrowLeftRegular, CheckmarkRegular, ArrowImportRegular } from '@fluentu
 import JsonView from '@uiw/react-json-view'
 import { MainLayout } from '../layout'
 import type { ContentItemDetails } from '../types/content'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../contexts'
 import customAxios from '../utilities/custom-axios'
 import {
   selectDirectoryTreeRoot,
@@ -319,16 +319,13 @@ export const JsonViewer = () => {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isFetching, setIsFetching] = useState(false)
   const [sourceDescription, setSourceDescription] = useState<string | null>(sourceResourceId)
-
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [selectedCmsOption, setSelectedCmsOption] = useState<CmsResourceOption | null>(null)
   const [cmsComboboxValue, setCmsComboboxValue] = useState('')
   const [isImportingCms, setIsImportingCms] = useState(false)
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
-
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-
   const tenantName = routeState?.tenantName ?? user?.tenant?.name ?? null
   const version = routeState?.version
   const viewer = routeState?.viewer ?? 'json'
@@ -496,7 +493,7 @@ export const JsonViewer = () => {
 
   const handleImportFromCms = async () => {
     if (!selectedCmsOption) {
-      setImportError('Select a JSON file from the CMS.')
+      setImportError("Select a JSON file from the CMS");
       return
     }
 
@@ -548,6 +545,7 @@ export const JsonViewer = () => {
                 onChange={(_, data) => setInput(data.value)}
                 resize="none"
                 appearance="outline"
+                style={{maxHeight: 'inherit'}}
               />
             </div>
             <CardFooter>

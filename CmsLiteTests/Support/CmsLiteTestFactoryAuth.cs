@@ -52,7 +52,23 @@ public class CmsLiteTestFactoryAuth : WebApplicationFactory<Program>, IDisposabl
                 ["Jwt:ValidateIssuer"] = "false",
                 ["Jwt:ValidateAudience"] = "false",
                 ["Jwt:ValidateLifetime"] = "false", // Disable for easier testing
-                ["Jwt:ValidateIssuerSigningKey"] = "true"
+                ["Jwt:ValidateIssuerSigningKey"] = "true",
+                // Rate limiting configuration for tests - use low limits for predictable test behavior
+                ["RateLimiting:Auth:PermitLimit"] = "5",
+                ["RateLimiting:Auth:WindowMinutes"] = "1",
+                ["RateLimiting:Auth:QueueLimit"] = "0",
+                ["RateLimiting:ContentRead:PermitLimit"] = "5",
+                ["RateLimiting:ContentRead:WindowMinutes"] = "1",
+                ["RateLimiting:ContentRead:QueueLimit"] = "0",
+                ["RateLimiting:ContentWrite:PermitLimit"] = "5",
+                ["RateLimiting:ContentWrite:WindowMinutes"] = "1",
+                ["RateLimiting:ContentWrite:QueueLimit"] = "0",
+                ["RateLimiting:BulkOperations:PermitLimit"] = "3",
+                ["RateLimiting:BulkOperations:WindowMinutes"] = "1",
+                ["RateLimiting:BulkOperations:QueueLimit"] = "0",
+                ["RateLimiting:Admin:PermitLimit"] = "5",
+                ["RateLimiting:Admin:WindowMinutes"] = "1",
+                ["RateLimiting:Admin:QueueLimit"] = "0"
             };
             configBuilder.AddInMemoryCollection(overrides!);
         });
