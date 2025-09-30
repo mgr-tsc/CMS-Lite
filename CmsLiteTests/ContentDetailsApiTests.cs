@@ -129,7 +129,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task GetContentDetails_InvalidTenant_ReturnsBadRequest()
+    public async Task GetContentDetails_InvalidTenant_ReturnsForbidden()
     {
         await factory.InitializeAsync();
         var client = factory.CreateClient();
@@ -138,7 +138,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
 
         var response = await client.GetAsync("/v1/invalid-tenant/test-resource/details");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

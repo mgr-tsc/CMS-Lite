@@ -11,7 +11,6 @@ import {
 import {
   FolderAddRegular,
   ArrowImportRegular,
-  AddRegular,
   DeleteRegular,
   EyeRegular,
   ArrowSyncRegular,
@@ -72,9 +71,7 @@ export const ActionBar = ({
   onNewDirectory,
   disableNewDirectory,
   onImportContent,
-  onCreateContent,
   disableImportContent,
-  disableCreateContent,
   onDeleteContent,
   onSeeDetails,
   onRefresh,
@@ -107,24 +104,6 @@ export const ActionBar = ({
             <MenuList>
               <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
               <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
-            </MenuList>
-          </MenuPopover>
-        </Menu>
-
-        <Menu>
-          <MenuTrigger disableButtonEnhancement>
-            <Button
-              appearance="primary"
-              icon={<AddRegular />}
-              disabled={disableCreateContent}
-            >
-              Create
-            </Button>
-          </MenuTrigger>
-          <MenuPopover>
-            <MenuList>
-              <MenuItem onClick={() => onCreateContent?.('json')}>JSON</MenuItem>
-              <MenuItem onClick={() => onCreateContent?.('xml')}>XML</MenuItem>
             </MenuList>
           </MenuPopover>
         </Menu>
