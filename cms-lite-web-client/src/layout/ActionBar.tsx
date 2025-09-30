@@ -14,6 +14,7 @@ import {
   DeleteRegular,
   EyeRegular,
   ArrowSyncRegular,
+  ArrowDownloadRegular,
 } from '@fluentui/react-icons'
 import { ACTION_BAR, BREAKPOINTS } from './layoutConstants'
 
@@ -66,6 +67,8 @@ interface ActionBarProps {
   onDeleteContent?: () => void
   onSeeDetails?: () => void
   onRefresh?: () => void
+  canDownload?: boolean
+  onDownloadContent?: () => void
 }
 
 export const ActionBar = ({
@@ -77,6 +80,8 @@ export const ActionBar = ({
   onDeleteContent,
   onSeeDetails,
   onRefresh,
+  canDownload,
+  onDownloadContent,
 }: ActionBarProps) => {
   const styles = useStyles()
 
@@ -103,13 +108,13 @@ export const ActionBar = ({
             </Button>
           </MenuTrigger>
           <MenuPopover>
-          <MenuList>
-            <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
-            <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
-            <MenuItem onClick={() => onImportContent?.('pdf')}>PDF</MenuItem>
-          </MenuList>
-        </MenuPopover>
-      </Menu>
+            <MenuList>
+              <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
+              <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
+              <MenuItem onClick={() => onImportContent?.('pdf')}>PDF</MenuItem>
+            </MenuList>
+          </MenuPopover>
+        </Menu>
 
         <Button
           icon={<ArrowSyncRegular />}
@@ -120,6 +125,14 @@ export const ActionBar = ({
       </div>
 
       <div className={styles.buttonGroup}>
+        <Button
+          icon={<ArrowDownloadRegular />}
+          disabled={!canDownload}
+          onClick={onDownloadContent}
+        >
+          Download
+        </Button>
+
         <Button
           icon={<EyeRegular />}
           disabled={!hasSelection}

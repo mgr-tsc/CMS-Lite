@@ -117,6 +117,12 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
     }
   }
 
+  const handleDownloadContent = () => {
+    if (selectedFiles.length === 1) {
+      console.log('Downloading content...')
+    }
+  }
+
   const handleRefresh = () => {
     console.log('Refreshing content...')
   }
@@ -160,6 +166,8 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
             onCreateContent={handleCreateContent}
             disableImportContent={false}
             disableCreateContent={false}
+            canDownload={selectedFiles.length === 1}
+            onDownloadContent={handleDownloadContent}
             onDeleteContent={handleDeleteContent}
             onSeeDetails={handleSeeDetails}
             onRefresh={handleRefresh}
