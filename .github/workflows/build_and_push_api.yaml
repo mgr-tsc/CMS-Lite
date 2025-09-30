@@ -28,8 +28,6 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}-api
-      DOCKER_CONTEXT: ${{ github.workspace }}
-      DOCKERFILE: ./docker/Dockerfile
 
     steps:
       - name: Checkout code
@@ -76,7 +74,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ env.DOCKERFILE }}
+          file: ./docker/Dockerfile
           push: ${{ github.event_name != 'workflow_dispatch' || inputs.push != 'false' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
