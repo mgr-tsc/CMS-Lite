@@ -756,6 +756,27 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         })
     }
 
+    const handleOpenXmlViewer = (resourceId: string, details: ContentItemDetails | null) => {
+        if (!resourceId) {
+            return
+        }
+
+        const tenantName = user?.tenant?.name
+
+        setDetailsState(prev => ({ ...prev, open: false }))
+        navigate('/tools/xml-viewer', {
+            state: {
+                resourceId,
+                metadata: details,
+                tenantName,
+                contentType: details?.contentType,
+                fileExtension: details?.metadata?.fileExtension,
+                version: details?.latestVersion,
+                viewer: 'xml' as const,
+            },
+        })
+    }
+
     const handleRefresh = () => {
         const tenantName = user?.tenant?.name
         if (tenantName) {
@@ -872,6 +893,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 onClose={handleCloseDetails}
                 onRetry={detailsState.error ? handleRetryDetails : undefined}
                 onOpenJsonViewer={handleOpenJsonViewer}
+                onOpenXmlViewer={handleOpenXmlViewer}
             />
         </div>
     )
