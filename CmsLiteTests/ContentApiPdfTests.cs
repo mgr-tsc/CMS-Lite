@@ -55,7 +55,7 @@ public class ContentApiPdfTests : IAsyncDisposable
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Invalid pdf content format", content);
+        Assert.Contains("Invalid PDF content format", content);
     }
 
     [Fact]
