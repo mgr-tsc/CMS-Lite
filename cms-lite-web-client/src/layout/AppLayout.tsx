@@ -201,7 +201,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         successMessage: null,
     })
     const importFileInputRef = useRef<HTMLInputElement | null>(null)
-    const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | null>(null)
+    const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | 'pdf' | null>(null)
     const [importAccept, setImportAccept] = useState('')
     const [isImporting, setIsImporting] = useState(false)
     const [infoDialogState, setInfoDialogState] = useState<InfoDialogState>({
@@ -281,12 +281,17 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         })
     }
 
-    const handleImportContent = (type: 'json' | 'xml') => {
+    const handleImportContent = (type: 'json' | 'xml' | 'pdf') => {
         if (!effectiveDirectory || !user?.tenant?.name) {
             return
         }
 
-        const accept = type === 'json' ? 'application/json,.json' : 'application/xml,text/xml,.xml'
+        const accept =
+            type === 'json'
+                ? 'application/json,.json'
+                : type === 'xml'
+                    ? 'application/xml,text/xml,.xml'
+                    : 'application/pdf,.pdf'
         setPendingImportType(type)
         setImportAccept(accept)
         window.setTimeout(() => {
@@ -651,6 +656,58 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 isLoading: true,
             })
             reader.readAsText(file)
+            return
+        }
+
+        if (pendingImportType === 'pdf') {
+            setIsImporting(true)
+            setInfoDialogState({
+                open: true,
+                title: 'Importing PDF',
+                description: `Uploading "${file.name}"...`,
+                primaryLabel: 'Close',
+                isLoading: true,
+            })
+
+            void (async () => {
+                try {
+                    const resourceName = file.name.replace(/\.pdf$/i, '') || file.name
+
+                    await customAxios.put(
+                        `/v1/${tenantName}/${encodeURIComponent(resourceName)}`,
+                        file,
+                        {
+                            headers: {
+                                'Content-Type': file.type || 'application/pdf',
+                                'X-Directory-Id': effectiveDirectory.id,
+                            },
+                        },
+                    )
+
+                    await dispatch(fetchDirectoryTree(tenantName))
+
+                    setInfoDialogState({
+                        open: true,
+                        title: 'Import complete',
+                        description: `File "${file.name}" imported successfully to ${targetPath}.`,
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                } catch (error) {
+                    console.error('Failed to import PDF file', error)
+                    setInfoDialogState({
+                        open: true,
+                        title: 'PDF upload failed',
+                        description: 'There was a problem uploading the PDF file. Please try again.',
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                } finally {
+                    setIsImporting(false)
+                    setPendingImportType(null)
+                }
+            })()
+
             return
         }
 

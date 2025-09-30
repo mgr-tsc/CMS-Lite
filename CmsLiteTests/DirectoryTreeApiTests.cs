@@ -180,7 +180,7 @@ public class DirectoryTreeApiTests : IAsyncDisposable
 
         var response = await client.GetAsync("/v1/nonexistent-tenant/directories/tree");
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
