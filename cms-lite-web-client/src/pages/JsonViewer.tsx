@@ -545,7 +545,7 @@ export const JsonViewer = () => {
                 onChange={(_, data) => setInput(data.value)}
                 resize="none"
                 appearance="outline"
-                style={{maxHeight: 'inherit'}}
+                style={{ maxHeight: 'inherit' }}
               />
             </div>
             <CardFooter>
