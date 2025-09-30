@@ -1,1 +1,6 @@
 export { ProtectedRoute } from './ProtectedRoute'
+export { LoadingSpinner } from './LoadingSpinner'
+export { FileDetailsModal } from './FileDetailsModal'
+export { CreateDirectoryDialog } from './CreateDirectoryDialog'
+export { SoftDeleteDialog } from './SoftDeleteDialog'
+export { InfoDialog } from './modals/InfoDialog'

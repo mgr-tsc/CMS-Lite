@@ -1,6 +1,15 @@
 export interface User {
-  email: string
-  name: string
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  tenant: TenantInfo | null;
+  isAuthenticated: boolean;
+}
+
+export interface TenantInfo {
+  id: string;
+  name: string;
 }
 
 export interface AuthContextType {
@@ -9,4 +18,9 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   isLoading: boolean
+}
+
+export interface LoginResponseSuccess {
+  token: string
+  user: User
 }

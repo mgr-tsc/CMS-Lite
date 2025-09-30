@@ -5,6 +5,11 @@ using CmsLite.Database;
 using CmsLite.Authentication;
 using CmsLite.Content;
 using CmsLite.Helpers.RequestMappers;
+using CmsLite.Monitoring;
+using Microsoft.OpenApi.Models;
+using CmsLite.Middlewares;
+using System.Text.Json;
+using CmsLite.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +25,58 @@ builder.Services.AddDbContext<CmsLiteDbContext>(options =>
 // Add blob storage services
 builder.Services.AddSingleton(_ => new BlobServiceClient(storageConnectionString));
 builder.Services.AddSingleton<IBlobRepo, BlobRepo>();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+});
+
 builder.AddCmsLiteAuthentication();
+builder.AddCmsRepositories();
+builder.AddLoggingServices();
+builder.AddCmsRateLimiting();
+
+// Add Swagger/OpenAPI services
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "CMS-Lite API",
+        Version = "v1",
+        Description = "A lightweight, multi-tenant JSON content management system with JWT authentication",
+        Contact = new OpenApiContact
+        {
+            Name = "CMS-Lite",
+            Url = new Uri("https://github.com/mgr-tsc/cms-lite")
+        }
+    });
+
+    // Add JWT Authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+builder.Services.AddCors();
 var app = builder.Build();
 
 // Health endpoint
@@ -69,9 +125,9 @@ app.MapPost("/attach-user", async (SignUpRequest request, IUserRepo userRepo, IT
         lastName = request.LastName,
         tenantId = request.TenantId
     });
-}).RequireAuthorization().WithDescription("Attach a new user to an existing tenant.").WithTags("SignUp");
+}).RequireAuthorization().WithDescription("Attach a new user to an existing tenant.").WithTags("SignUp").RequireRateLimiting("admin");
 
-app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo tenantRepo, IUserRepo userRepo, CmsLiteDbContext dbContext) =>
+app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo tenantRepo, IUserRepo userRepo, IDirectoryRepo directoryRepo, CmsLiteDbContext dbContext) =>
 {
     var existingTenant = await tenantRepo.GetTenantByNameAsync(request.Name);
     if (existingTenant != null)
@@ -97,7 +153,16 @@ app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo te
             TenantId = newTenant.Id,
             IsActive = true
         };
+        var newRootDirectory = new DbSet.Directory
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "root",
+            TenantId = newTenant.Id,
+            Level = 0,
+            ParentId = null
+        };
         await tenantRepo.CreateTenantAsync(newTenant);
+        await directoryRepo.CreateDirectoryAsync(newRootDirectory);
         await userRepo.CreateUserAsync(newUser);
         await transaction.CommitAsync();
         return Results.Ok(new
@@ -112,7 +177,7 @@ app.MapPost("/create-tenant", async (CreateTenantRequest request, ITenantRepo te
         await transaction.RollbackAsync();
         throw;
     }
-}).WithDescription("Create a new tenant along with its owner user.").WithTags("SignUp");
+}).WithDescription("Create a new tenant along with its owner user.").WithTags("SignUp").RequireRateLimiting("admin");
 
 // Initialize database
 using (var scope = app.Services.CreateScope())
@@ -123,16 +188,34 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
-app.UseCmsLiteAuthentication();
-app.MapAuthenticationEndpoints();
-app.MapContentEndpoints();
-if (app.Environment.IsDevelopment())
+// Configure Swagger middleware
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Local")
 {
+    app.UseSwagger();
+    app.UseCors(policy =>
+        policy.WithOrigins("http://localhost:5174", "http://localhost:9090", "http://host.docker.internal:9090") // Adjust the origin as needed
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CMS-Lite API v1");
+        c.RoutePrefix = "swagger";
+        c.DocumentTitle = "CMS-Lite API Documentation";
+        c.DisplayRequestDuration();
+        c.EnableTryItOutByDefault();
+    });
     app.UseDeveloperExceptionPage();
 }
 else
 {
     app.UseHttpsRedirection();
 }
+
+app.UseCmsLiteAuthentication();
+app.UseRateLimiter();
+app.MapAuthenticationEndpoints();
+app.MapContentEndpoints();
+app.MapDirectoryEndpoints();
 app.Run();
 public partial class Program { }

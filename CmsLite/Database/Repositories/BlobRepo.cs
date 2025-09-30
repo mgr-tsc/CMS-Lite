@@ -17,12 +17,10 @@ public class BlobRepo : IBlobRepo
         _container.CreateIfNotExists();
     }
 
-    public async Task<(string ETag, long Size)> UploadJsonAsync(string key, byte[] bytes)
+    public async Task<(string ETag, long Size)> UploadAsync(string key, byte[] bytes)
     {
         var blob = _container.GetBlobClient(key);
         using var ms = new MemoryStream(bytes);
-        if (Helpers.Utilities.IsValidJson(bytes) == false)
-            throw new ArgumentException("The provided bytes are not valid JSON.", nameof(bytes));
         var resp = await blob.UploadAsync(ms, overwrite: true);
         var props = await blob.GetPropertiesAsync();
         return (props.Value.ETag.ToString(), props.Value.ContentLength);
@@ -44,5 +42,11 @@ public class BlobRepo : IBlobRepo
         if (!await blob.ExistsAsync()) return null;
         var props = await blob.GetPropertiesAsync();
         return (props.Value.ContentLength, props.Value.ETag.ToString());
+    }
+
+    public Task DeleteAsync(string key)
+    {
+        var blob = _container.GetBlobClient(key);
+        return blob.DeleteIfExistsAsync();
     }
 }

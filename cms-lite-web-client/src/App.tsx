@@ -1,22 +1,36 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { FluentProvider, teamsLightTheme } from '@fluentui/react-components'
-import { AuthProvider } from './contexts/AuthContext'
+import { FluentProvider } from '@fluentui/react-components'
+import { AuthProvider } from './contexts'
+// import { purpleTheme } from './themes/purpleTheme'
+import { teamsLightTheme } from "@fluentui/react-components";
 import { ProtectedRoute } from './components'
-import { SignIn, Dashboard } from './pages'
+import { SignIn, Dashboard, JsonViewer } from './pages'
 import './App.css'
+import { useEffect } from 'react'
 
 function App() {
+  useEffect(() => {
+    console.log('REACT_READY');
+  }, [])
   return (
     <FluentProvider theme={teamsLightTheme}>
       <AuthProvider>
         <Router>
           <Routes>
-            <Route path="/signin" element={<SignIn />} />
+            <Route path="/login" element={<SignIn />} />
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/json-viewer"
+              element={
+                <ProtectedRoute>
+                  <JsonViewer />
                 </ProtectedRoute>
               }
             />

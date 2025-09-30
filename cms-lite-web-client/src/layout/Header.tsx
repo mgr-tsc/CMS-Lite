@@ -1,6 +1,6 @@
 import { Text, Caption1, Button, makeStyles, tokens } from '@fluentui/react-components'
 import { SignOutRegular, NavigationRegular } from '@fluentui/react-icons'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { BREAKPOINTS } from './layoutConstants'
 
 const useStyles = makeStyles({
@@ -81,12 +81,15 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
-        <Button
-          icon={<NavigationRegular />}
-          appearance="subtle"
-          onClick={onToggleNavMenu}
-          className={styles.navToggleButton}
-        />
+        {onToggleNavMenu && (
+          <Button
+            icon={<NavigationRegular />}
+            appearance="subtle"
+            onClick={onToggleNavMenu}
+            className={styles.navToggleButton}
+            aria-label="Toggle navigation menu"
+          />
+        )}
         <div className={styles.titleSection}>
           <Text as="h1" size={800} weight="bold">
             CMS Lite - Content Management System
@@ -99,7 +102,7 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
         <div className={styles.userSection}>
           <div className={styles.userDetails}>
             <Text size={300}>
-              Welcome, {user.name}
+              Welcome, {user.firstName || user.lastName ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : user.email}
             </Text>
             <Caption1>
               {user.email}

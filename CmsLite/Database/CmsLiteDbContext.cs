@@ -15,12 +15,15 @@ public class CmsLiteDbContext : DbContext, ICmsLiteDbContext
     public Microsoft.EntityFrameworkCore.DbSet<DbSet.Tenant> TenantsTable => Set<DbSet.Tenant>();
     public Microsoft.EntityFrameworkCore.DbSet<DbSet.ContentItem> ContentItemsTable => Set<DbSet.ContentItem>();
     public Microsoft.EntityFrameworkCore.DbSet<DbSet.ContentVersion> ContentVersionsTable => Set<DbSet.ContentVersion>();
+    public Microsoft.EntityFrameworkCore.DbSet<DbSet.Directory> DirectoriesTable => Set<DbSet.Directory>();
 
     Microsoft.EntityFrameworkCore.DbSet<DbSet.User> ICmsLiteDbContext.Users => UsersTable;
 
     Microsoft.EntityFrameworkCore.DbSet<DbSet.UserSession> ICmsLiteDbContext.UserSessions => UserSessionsTable;
 
     Microsoft.EntityFrameworkCore.DbSet<DbSet.ContentItem> ICmsLiteDbContext.ContentItems => ContentItemsTable;
+
+    Microsoft.EntityFrameworkCore.DbSet<DbSet.Directory> ICmsLiteDbContext.Directories => DirectoriesTable;
 
     Microsoft.EntityFrameworkCore.DbSet<DbSet.ContentVersion> ICmsLiteDbContext.ContentVersions => ContentVersionsTable;
 
@@ -37,7 +40,26 @@ public class CmsLiteDbContext : DbContext, ICmsLiteDbContext
             entity.HasOne(u => u.Tenant)
                 .WithMany(t => t.Users)
                 .HasForeignKey(u => u.TenantId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<DbSet.Directory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            // Unique constraint for subdirectories under the same parent within a tenant
+            entity.HasIndex(e => new { e.TenantId, e.ParentId, e.Name }).IsUnique()
+            .HasFilter("ParentId IS NOT NULL");
+            // Unique constraint for root directories within a tenant -> only one root directory per tenant 
+            entity.HasIndex(e => new { e.TenantId }).IsUnique()
+            .HasFilter("ParentId IS NULL");
+            entity.Property(e => e.Name).HasMaxLength(128);
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Parent)
+                .WithMany(d => d.SubDirectories)
+                .HasForeignKey(e => e.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<DbSet.UserSession>(entity =>
         {
@@ -46,7 +68,7 @@ public class CmsLiteDbContext : DbContext, ICmsLiteDbContext
             entity.HasOne(e => e.User)
                 .WithMany(u => u.UserSessions)
                 .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<DbSet.Tenant>(entity =>
         {
@@ -60,10 +82,15 @@ public class CmsLiteDbContext : DbContext, ICmsLiteDbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.TenantId, e.Resource }).IsUnique();
+            entity.HasIndex(e => e.DirectoryId);
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.ContentItems)
                 .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Directory)
+                .WithMany(d => d.ContentItems)
+                .HasForeignKey(e => e.DirectoryId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<DbSet.ContentVersion>(entity =>
         {
@@ -72,30 +99,32 @@ public class CmsLiteDbContext : DbContext, ICmsLiteDbContext
             entity.HasOne(e => e.Tenant)
                 .WithMany()
                 .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
+
 public static class DbSet
 {
     public class ContentItem
     {
         public int Id { get; set; }
         public string TenantId { get; set; } = default!;  // Foreign key
+        public string DirectoryId { get; set; } = default!; // Foreign key
         public string Resource { get; set; } = default!;
         public int LatestVersion { get; set; }
-        public string ContentType { get; set; } = "application/json";
+        public string ContentType { get; set; } = default!;
         public long ByteSize { get; set; }
         public string Sha256 { get; set; } = default!;
         public string ETag { get; set; } = default!;
         public DateTime CreatedAtUtc { get; set; }
         public DateTime UpdatedAtUtc { get; set; }
-        public int IsDeleted { get; set; }
+        public bool IsDeleted { get; set; }
 
         // Navigation properties
         public Tenant Tenant { get; set; } = default!;
+        public Directory Directory { get; set; } = default!;
     }
-
     public class ContentVersion
     {
         public int Id { get; set; }
@@ -110,7 +139,6 @@ public static class DbSet
         // Navigation properties
         public Tenant Tenant { get; set; } = default!;
     }
-
     public class Tenant
     {
         public string Id { get; set; } = default!;
@@ -152,6 +180,23 @@ public static class DbSet
         public DateTime ExpiresAtUtc { get; set; } = DateTime.UtcNow.AddMinutes(30);
         public bool IsRevoked { get; set; } = false;
 
+    }
+    public class Directory
+    {
+        public string Id { get; set; } = default!;
+        public string TenantId { get; set; } = default!; // Foreign key
+        public string? ParentId { get; set; } = null;
+        public string Name { get; set; } = default!;
+        public int Level { get; set; } = 0; // Root directories have level 0
+        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+        public bool IsActive { get; set; } = true;
+
+        // Navigation properties
+        public Tenant Tenant { get; set; } = default!;
+        public Directory? Parent { get; set; }
+        public ICollection<Directory> SubDirectories { get; set; } = new List<Directory>();
+        public ICollection<ContentItem> ContentItems { get; set; } = new List<ContentItem>();
     }
 }
 

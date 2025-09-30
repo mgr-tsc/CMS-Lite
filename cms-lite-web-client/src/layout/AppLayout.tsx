@@ -1,237 +1,880 @@
-import type { CSSProperties, ReactNode } from 'react'
-import { useEffect, useState } from 'react'
-import { makeStyles } from '@fluentui/react-components'
-import { Header } from './Header'
-import { Footer } from './Footer'
-import { ActionBar } from './ActionBar'
-import { NavMenu } from './NavMenu'
-import { ContentArea } from './ContentArea'
+import type {CSSProperties, ReactNode, ChangeEvent} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {isAxiosError} from 'axios'
+import {useNavigate} from 'react-router-dom'
+import {useDispatch, useSelector} from 'react-redux'
+import {makeStyles} from '@fluentui/react-components'
+import {Header} from './Header'
+import {Footer} from './Footer'
+import {ActionBar} from './ActionBar'
+import {NavMenu} from './NavMenu'
+import {ContentArea} from './ContentArea'
 import {
-  ANIMATIONS,
-  BREAKPOINTS,
-  getNavMenuWidth,
+    ANIMATIONS,
+    BREAKPOINTS,
+    getNavMenuWidth,
 } from './layoutConstants'
+import {useAuth} from '../hooks/useAuth'
+import type {AppDispatch} from '../store/store'
+import {
+    fetchDirectoryTree,
+    selectDirectoryTreeRoot,
+    selectDirectoryTreeLoading,
+    selectDirectoryTreeError,
+    selectDirectoryTreeCurrentDirectory,
+    selectDirectoryTreeLastFetchedTenant,
+    setCurrentDirectory,
+    type DirectoryNode,
+} from '../store/slices/directoryTree'
+import {FileDetailsModal} from '../components/FileDetailsModal'
+import {CreateDirectoryDialog} from '../components/CreateDirectoryDialog'
+import {SoftDeleteDialog, type SoftDeleteItem} from '../components/SoftDeleteDialog'
+import {InfoDialog} from '../components/modals/InfoDialog'
+import customAxios from '../utilities/custom-axios'
+import type {ContentItemDetails} from '../types/content'
 
 const useStyles = makeStyles({
-  appContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100vh',
-    backgroundColor: 'inherit',
-  },
-  mainContainer: {
-    display: 'grid',
-    flex: 1,
-    minHeight: 0,
-    position: 'relative',
-    width: '100%',
-    gridTemplateColumns: `${getNavMenuWidth(false)}px 1fr`,
-    transition: ANIMATIONS.CONTENT_TRANSITION,
-    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
-      gridTemplateColumns: '1fr',
+    appContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        backgroundColor: 'inherit',
     },
-  },
-  contentWrapper: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    transition: ANIMATIONS.CONTENT_TRANSITION,
-    overflow: 'hidden',
-    minWidth: 0,
-    gridColumn: 2,
-    [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
-      gridColumn: '1',
+    mainContainer: {
+        display: 'grid',
+        flex: 1,
+        minHeight: 0,
+        position: 'relative',
+        width: '100%',
+        gridTemplateColumns: `${getNavMenuWidth(false)}px 1fr`,
+        transition: ANIMATIONS.CONTENT_TRANSITION,
+        [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+            gridTemplateColumns: '1fr',
+        },
     },
-  },
-  actionBarWrapper: {
-    width: '100%',
-    zIndex: 1,
-  },
-  mainContent: {
-    flex: 1,
-    overflow: 'auto',
-    minHeight: 0,
-  },
-  overlayBackdrop: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    zIndex: 9,
-    opacity: 1,
-    transition: 'opacity 0.3s ease',
-    [`@media (min-width: ${BREAKPOINTS.TABLET + 1}px)`]: {
-      display: 'none',
+    contentWrapper: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        transition: ANIMATIONS.CONTENT_TRANSITION,
+        overflow: 'hidden',
+        minWidth: 0,
+        gridColumn: 2,
+        [`@media (max-width: ${BREAKPOINTS.TABLET}px)`]: {
+            gridColumn: '1',
+        },
     },
-  },
+    actionBarWrapper: {
+        width: '100%',
+        zIndex: 1,
+    },
+    mainContent: {
+        flex: 1,
+        overflow: 'auto',
+        minHeight: 0,
+    },
+    overlayBackdrop: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+        zIndex: 9,
+        opacity: 1,
+        transition: 'opacity 0.3s ease',
+        [`@media (min-width: ${BREAKPOINTS.TABLET + 1}px)`]: {
+            display: 'none',
+        },
+    },
 })
 
-interface FileItem {
-  id: string
-  name: string
-  type: 'file'
-  version: string
-  size: string
-  lastModified: string
-}
-
-interface NavItem {
-  id: string
-  name: string
-  type: 'folder'
-  children?: NavItem[]
-  files?: FileItem[]
-}
-
 interface AppLayoutProps {
-  children?: ReactNode
+    children?: ReactNode
 }
 
-export const AppLayout = ({ children }: AppLayoutProps) => {
-  const styles = useStyles()
-  const [selectedItem, setSelectedItem] = useState<NavItem | null>(null)
-  const [viewportWidth, setViewportWidth] = useState(() =>
-    typeof window === 'undefined' ? BREAKPOINTS.DESKTOP : window.innerWidth,
-  )
-  const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(() =>
-    typeof window === 'undefined' ? false : window.innerWidth < BREAKPOINTS.TABLET,
-  )
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+interface FileDetailsState {
+    open: boolean
+    isLoading: boolean
+    error: string | null
+    data: ContentItemDetails | null
+    resourceId: string | null
+}
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined
+interface CreateDirectoryState {
+    open: boolean
+    name: string
+    isSubmitting: boolean
+    error: string | null
+}
+
+interface SoftDeleteState {
+    open: boolean
+    items: SoftDeleteItem[]
+    isSubmitting: boolean
+    error: string | null
+    successMessage: string | null
+}
+
+interface InfoDialogState {
+    open: boolean
+    title: string
+    description: string
+    primaryLabel?: string
+    isLoading?: boolean
+}
+const findDirectoryPathSegments = (root: DirectoryNode | null, targetId: string | null): string[] => {
+    if (!root || !targetId) {
+        return []
     }
 
-    let rAFId: number | null = null
-
-    const handleResize = () => {
-      if (rAFId !== null) {
-        return
-      }
-      rAFId = window.requestAnimationFrame(() => {
-        setViewportWidth(window.innerWidth)
-        rAFId = null
-      })
+    const traverse = (node: DirectoryNode, trail: string[]): string[] | null => {
+        const nextTrail = [...trail, node.name]
+        if (node.id === targetId) {
+            return nextTrail
+        }
+        for (const child of node.subDirectories) {
+            const result = traverse(child, nextTrail)
+            if (result) {
+                return result
+            }
+        }
+        return null
     }
 
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      if (rAFId !== null) {
-        window.cancelAnimationFrame(rAFId)
-      }
+    return traverse(root, []) ?? []
+}
+
+const buildPathString = (segments: string[]): string => {
+    if (segments.length === 0) {
+        return '/'
     }
-  }, [])
+    return `/${segments.join('/')}`
+}
 
-  const isOverlayNav = viewportWidth < BREAKPOINTS.TABLET
-  const navWidth = isOverlayNav ? 0 : getNavMenuWidth(isNavMenuCollapsed)
-  const mainContainerStyle: CSSProperties = {
-    gridTemplateColumns: isOverlayNav ? '1fr' : `${navWidth}px 1fr`,
-  }
-
-  const handleItemSelect = (item: NavItem) => {
-    setSelectedItem(item)
-    setSelectedFiles([]) // Clear file selection when switching directories
-    if (isOverlayNav) {
-      setIsNavMenuCollapsed(true)
+const appendPathSegment = (basePath: string, segment: string): string => {
+    const trimmedSegment = segment.trim()
+    if (!trimmedSegment) {
+        return basePath === '/' ? '/' : `${basePath}/`
     }
-  }
-
-  const handleFileSelect = (fileIds: string[]) => {
-    setSelectedFiles(fileIds)
-  }
-
-  const handleNewContent = () => {
-    console.log('Creating new content...')
-  }
-
-  const handleEditContent = () => {
-    if (selectedFiles.length > 0) {
-      console.log('Editing content:', selectedFiles)
+    if (basePath === '/' || basePath.length === 0) {
+        return `/${trimmedSegment}`
     }
-  }
+    return `${basePath}/${trimmedSegment}`
+}
 
-  const handleDeleteContent = () => {
-    if (selectedFiles.length > 0) {
-      console.log('Deleting content:', selectedFiles)
+const delay = (ms: number) => new Promise<void>((resolve) => {
+    setTimeout(resolve, ms)
+});
+export const AppLayout = ({children}: AppLayoutProps) => {
+    const styles = useStyles()
+    const dispatch = useDispatch<AppDispatch>()
+    const navigate = useNavigate()
+    const {user, isAuthenticated} = useAuth()
+    const rootDirectory = useSelector(selectDirectoryTreeRoot)
+    const directoryLoading = useSelector(selectDirectoryTreeLoading)
+    const directoryError = useSelector(selectDirectoryTreeError)
+    const currentDirectory = useSelector(selectDirectoryTreeCurrentDirectory)
+    const lastFetchedTenant = useSelector(selectDirectoryTreeLastFetchedTenant)
+    const [viewportWidth, setViewportWidth] = useState(() =>
+        typeof window === 'undefined' ? BREAKPOINTS.DESKTOP : window.innerWidth,
+    )
+    const [isNavMenuCollapsed, setIsNavMenuCollapsed] = useState<boolean>(() =>
+        typeof window === 'undefined' ? false : window.innerWidth < BREAKPOINTS.TABLET,
+    )
+    const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+    const [detailsState, setDetailsState] = useState<FileDetailsState>({
+        open: false,
+        isLoading: false,
+        error: null,
+        data: null,
+        resourceId: null,
+    })
+    const [createDirectoryState, setCreateDirectoryState] = useState<CreateDirectoryState>({
+        open: false,
+        name: '',
+        isSubmitting: false,
+        error: null,
+    })
+    const [softDeleteState, setSoftDeleteState] = useState<SoftDeleteState>({
+        open: false,
+        items: [],
+        isSubmitting: false,
+        error: null,
+        successMessage: null,
+    })
+    const importFileInputRef = useRef<HTMLInputElement | null>(null)
+    const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | null>(null)
+    const [importAccept, setImportAccept] = useState('')
+    const [isImporting, setIsImporting] = useState(false)
+    const [infoDialogState, setInfoDialogState] = useState<InfoDialogState>({
+        open: false,
+        title: 'Coming soon',
+        description: 'This feature is under construction. Check back again shortly.',
+        primaryLabel: 'Close',
+        isLoading: false,
+    })
+    useEffect(() => {
+        const tenantName = user?.tenant?.name
+        if (!isAuthenticated || !tenantName) {
+            return
+        }
+        const alreadyFetchedForTenant = lastFetchedTenant === tenantName
+        if (alreadyFetchedForTenant || directoryLoading) {
+            return
+        }
+        void dispatch(fetchDirectoryTree(tenantName));
+    }, [dispatch, directoryLoading, isAuthenticated, lastFetchedTenant, user?.tenant?.name])
+
+    useEffect(() => {
+        setSelectedFiles([])
+    }, [currentDirectory?.id])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined
+        }
+
+        let rAFId: number | null = null
+
+        const handleResize = () => {
+            if (rAFId !== null) {
+                return
+            }
+            rAFId = window.requestAnimationFrame(() => {
+                setViewportWidth(window.innerWidth)
+                rAFId = null
+            })
+        }
+
+        handleResize()
+        window.addEventListener('resize', handleResize)
+        return () => {
+            window.removeEventListener('resize', handleResize)
+            if (rAFId !== null) {
+                window.cancelAnimationFrame(rAFId)
+            }
+        }
+    }, [])
+
+    const isOverlayNav = viewportWidth < BREAKPOINTS.TABLET
+    const navWidth = isOverlayNav ? 0 : getNavMenuWidth(isNavMenuCollapsed)
+    const mainContainerStyle: CSSProperties = {
+        gridTemplateColumns: isOverlayNav ? '1fr' : `${navWidth}px 1fr`,
     }
-  }
 
-  const handleSeeDetails = () => {
-    if (selectedFiles.length > 0) {
-      console.log('Showing details for:', selectedFiles)
+    const handleItemSelect = (item: DirectoryNode) => {
+        dispatch(setCurrentDirectory(item.id));
+        setSelectedFiles([]); // Clear file selection when switching directories
+        if (isOverlayNav) {
+            setIsNavMenuCollapsed(true);
+        }
     }
-  }
 
-  const handleRefresh = () => {
-    console.log('Refreshing content...')
-  }
+    const handleFileSelect = (fileIds: string[]) => {
+        setSelectedFiles(fileIds)
+    }
 
-  const handleViewAll = () => {
-    console.log('Viewing all content...')
-    setSelectedItem(null)
-  }
+    const handleNewDirectory = () => {
+        setCreateDirectoryState({
+            open: true,
+            name: '',
+            isSubmitting: false,
+            error: null,
+        })
+    }
 
-  const handleToggleNavMenu = () => {
-    setIsNavMenuCollapsed(prev => !prev)
-  }
+    const handleImportContent = (type: 'json' | 'xml') => {
+        if (!effectiveDirectory || !user?.tenant?.name) {
+            return
+        }
 
-  return (
-    <div className={styles.appContainer}>
-      {/* Header spans full width */}
-      <Header onToggleNavMenu={handleToggleNavMenu} />
+        const accept = type === 'json' ? 'application/json,.json' : 'application/xml,text/xml,.xml'
+        setPendingImportType(type)
+        setImportAccept(accept)
+        window.setTimeout(() => {
+            importFileInputRef.current?.click()
+        }, 0)
+    }
 
-      {isOverlayNav && !isNavMenuCollapsed && (
-        <div
-          className={styles.overlayBackdrop}
-          onClick={() => setIsNavMenuCollapsed(true)}
-          role="presentation"
-          aria-hidden="true"
-        />
-      )}
+    const handleCreateContent = (type: 'json' | 'xml') => {
+        setInfoDialogState({
+            open: true,
+            title: `${type.toUpperCase()} creation coming soon`,
+            description: 'Authoring new content directly from the dashboard is on the roadmap.',
+            primaryLabel: 'Close',
+            isLoading: false,
+        })
+    }
 
-      <div className={styles.mainContainer} style={mainContainerStyle}>
-        {/* Fixed sidebar */}
-        <NavMenu
-          onItemSelect={handleItemSelect}
-          selectedItemId={selectedItem?.id}
-          isCollapsed={isNavMenuCollapsed}
-          isOverlay={isOverlayNav}
-          onDismissOverlay={() => setIsNavMenuCollapsed(true)}
-        />
+    const handleDeleteContent = () => {
+        if (!effectiveDirectory || selectedFiles.length === 0) {
+            return
+        }
 
-        {/* Main content area */}
-        <div className={styles.contentWrapper}>
-          {/* ActionBar */}
-          <div className={styles.actionBarWrapper}>
-            <ActionBar
-              hasSelection={selectedFiles.length > 0}
-              onNewContent={handleNewContent}
-              onEditContent={handleEditContent}
-              onDeleteContent={handleDeleteContent}
-              onSeeDetails={handleSeeDetails}
-              onRefresh={handleRefresh}
-              onViewAll={handleViewAll}
+        const parentPath = parentPathDisplay
+        const items: SoftDeleteItem[] = selectedFiles
+            .map((fileId) => effectiveDirectory.contentItems.find((item) => item.id === fileId))
+            .filter((item): item is NonNullable<typeof item> => Boolean(item))
+            .map((item) => ({
+                id: item.id,
+                name: item.resource,
+                path: appendPathSegment(parentPath, item.resource),
+                resource: item.resource,
+            }))
+
+        if (items.length === 0) {
+            return
+        }
+
+        setSoftDeleteState({
+            open: true,
+            items,
+            isSubmitting: false,
+            error: null,
+            successMessage: null,
+        })
+    }
+
+    const loadFileDetails = useCallback(async (tenantName: string, resourceId: string) => {
+        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
+        try {
+            const {data} = await customAxios.get<ContentItemDetails>(`/v1/${tenantName}/${encodeURIComponent(resourceId)}/details`)
+            setDetailsState(prev => ({...prev, isLoading: false, data}))
+        } catch (error) {
+            let message = 'Failed to load file details'
+            if (error instanceof Error) {
+                message = error.message
+            }
+            setDetailsState(prev => ({...prev, isLoading: false, error: message}))
+        }
+    }, [])
+
+    const effectiveDirectory = useMemo(() => currentDirectory ?? rootDirectory ?? null, [currentDirectory, rootDirectory])
+    const parentPathSegments = useMemo(
+        () => findDirectoryPathSegments(rootDirectory, effectiveDirectory?.id ?? null),
+        [rootDirectory, effectiveDirectory?.id],
+    )
+    const parentPathDisplay = useMemo(() => buildPathString(parentPathSegments), [parentPathSegments])
+    const proposedDirectoryPath = useMemo(
+        () => appendPathSegment(parentPathDisplay, createDirectoryState.name.trim() || '(directory-name)'),
+        [parentPathDisplay, createDirectoryState.name],
+    )
+
+    const handleSeeDetails = () => {
+        const tenantName = user?.tenant?.name
+        if (selectedFiles.length === 0 || !effectiveDirectory || !tenantName) {
+            return
+        }
+
+        const fileId = selectedFiles[0]
+        const file = effectiveDirectory.contentItems.find(item => item.id === fileId)
+        if (!file) {
+            return
+        }
+
+        setDetailsState({
+            open: true,
+            isLoading: true,
+            error: null,
+            data: null,
+            resourceId: file.resource,
+        })
+
+        void loadFileDetails(tenantName, file.resource)
+    }
+
+    const handleCloseDetails = () => {
+        setDetailsState(prev => ({...prev, open: false}))
+    }
+
+    const handleRetryDetails = () => {
+        const tenantName = user?.tenant?.name
+        if (!detailsState.resourceId || !tenantName) {
+            return
+        }
+        setDetailsState(prev => ({...prev, isLoading: true, error: null}))
+        void loadFileDetails(tenantName, detailsState.resourceId)
+    }
+
+    const handleDirectoryNameChange = (value: string) => {
+        setCreateDirectoryState(prev => ({
+            ...prev,
+            name: value,
+            error: null,
+        }))
+    }
+
+    const handleCancelCreateDirectory = () => {
+        if (createDirectoryState.isSubmitting) {
+            return
+        }
+        setCreateDirectoryState({
+            open: false,
+            name: '',
+            isSubmitting: false,
+            error: null,
+        })
+    }
+
+    const handleSubmitCreateDirectory = async () => {
+        const tenantName = user?.tenant?.name
+        const parentDirectory = effectiveDirectory
+
+        if (!tenantName || !parentDirectory) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: 'Missing tenant or directory context. Please try again.',
+            }))
+            return
+        }
+
+        const trimmedName = createDirectoryState.name.trim()
+        if (!trimmedName) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: 'Directory name is required.',
+            }))
+            return
+        }
+
+        const hasDuplicate = parentDirectory.subDirectories.some(
+            (directory) => directory.name.toLowerCase() === trimmedName.toLowerCase(),
+        )
+
+        if (hasDuplicate) {
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                error: `A directory named "${trimmedName}" already exists here.`,
+            }))
+            return
+        }
+
+        setCreateDirectoryState(prev => ({
+            ...prev,
+            isSubmitting: true,
+            error: null,
+        }))
+
+        try {
+            await customAxios.post(`/v1/${tenantName}/directories`, {
+                name: trimmedName,
+                parentId: parentDirectory.id,
+            })
+
+            setCreateDirectoryState({
+                open: false,
+                name: '',
+                isSubmitting: false,
+                error: null,
+            })
+
+            await dispatch(fetchDirectoryTree(tenantName))
+        } catch (error: unknown) {
+            let message = 'Failed to create directory.'
+            if (isAxiosError(error)) {
+                if (error.response?.status === 409) {
+                    message = `A directory named "${trimmedName}" already exists here.`
+                } else if (error.response?.data && typeof error.response.data === 'object') {
+                    const dataMessage = (error.response.data as { message?: string }).message
+                    if (dataMessage) {
+                        message = dataMessage
+                    }
+                } else if (error.message) {
+                    message = error.message
+                }
+            } else if (error instanceof Error) {
+                message = error.message
+            }
+
+            setCreateDirectoryState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                error: message,
+            }))
+        }
+    }
+
+    const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+
+        if (!pendingImportType || !file) {
+            setPendingImportType(null)
+            return
+        }
+
+        if (!effectiveDirectory || !user?.tenant?.name) {
+            setPendingImportType(null)
+            return
+        }
+
+        const tenantName = user.tenant.name
+
+        const targetPath = appendPathSegment(parentPathDisplay, file.name)
+
+        if (pendingImportType === 'json') {
+            const reader = new FileReader()
+            reader.onload = () => {
+                void (async () => {
+                    try {
+                        const text =
+                            typeof reader.result === 'string'
+                                ? reader.result
+                                : new TextDecoder().decode(reader.result as ArrayBuffer)
+
+                        JSON.parse(text)
+                        const resourceName = file.name.replace(/\.json$/i, '') || file.name
+
+                        await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Directory-Id': effectiveDirectory.id,
+                            },
+                        })
+
+                        await dispatch(fetchDirectoryTree(tenantName))
+
+                        setInfoDialogState({
+                            open: true,
+                            title: 'Import complete',
+                            description: `File "${file.name}" imported successfully to ${targetPath}.`,
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                    } catch (error) {
+                        console.error('Failed to import JSON file', error)
+                        setInfoDialogState({
+                            open: true,
+                            title: 'JSON upload failed',
+                            description: 'There was a problem uploading the file. Please verify the contents and try again.',
+                            primaryLabel: 'Close',
+                        })
+                        setInfoDialogState(prev => ({
+                            ...prev,
+                            isLoading: false,
+                        }))
+                    } finally {
+                        setIsImporting(false)
+                        setPendingImportType(null)
+                    }
+                })()
+            }
+            reader.onerror = () => {
+                console.error('Failed to read JSON file', reader.error)
+                setInfoDialogState({
+                    open: true,
+                    title: 'File read error',
+                    description: 'Unable to read the selected JSON file. Please try again.',
+                    primaryLabel: 'Close',
+                    isLoading: false,
+                })
+                setIsImporting(false)
+                setPendingImportType(null)
+            }
+            setIsImporting(true)
+            setInfoDialogState({
+                open: true,
+                title: 'Importing JSON',
+                description: `Uploading "${file.name}"...`,
+                primaryLabel: 'Close',
+                isLoading: true,
+            })
+            reader.readAsText(file)
+            return
+        }
+
+        if (pendingImportType === 'xml') {
+            const reader = new FileReader()
+            reader.onload = () => {
+                void (async () => {
+                    try {
+                        const text =
+                            typeof reader.result === 'string'
+                                ? reader.result
+                                : new TextDecoder().decode(reader.result as ArrayBuffer)
+
+                        const parser = new DOMParser()
+                        const parsedDoc = parser.parseFromString(text, 'application/xml')
+                        if (parsedDoc.getElementsByTagName('parsererror').length > 0) {
+                            throw new Error('Invalid XML format')
+                        }
+
+                        const resourceName = file.name.replace(/\.xml$/i, '') || file.name
+
+                        await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
+                            headers: {
+                                'Content-Type': 'application/xml',
+                                'X-Directory-Id': effectiveDirectory.id,
+                            },
+                        })
+
+                        await dispatch(fetchDirectoryTree(tenantName))
+
+                        setInfoDialogState({
+                            open: true,
+                            title: 'Import complete',
+                            description: `File "${file.name}" imported successfully to ${targetPath}.`,
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                    } catch (error) {
+                        console.error('Failed to import XML file', error)
+                        setInfoDialogState({
+                            open: true,
+                            title: 'XML upload failed',
+                            description: 'There was a problem uploading the XML file. Please verify the contents and try again.',
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                    } finally {
+                        setIsImporting(false)
+                        setPendingImportType(null)
+                    }
+                })()
+            }
+            reader.onerror = () => {
+                console.error('Failed to read XML file', reader.error)
+                setInfoDialogState({
+                    open: true,
+                    title: 'File read error',
+                    description: 'Unable to read the selected XML file. Please try again.',
+                    primaryLabel: 'Close',
+                    isLoading: false,
+                })
+                setIsImporting(false)
+                setPendingImportType(null)
+            }
+            setIsImporting(true)
+            setInfoDialogState({
+                open: true,
+                title: 'Importing XML',
+                description: `Uploading "${file.name}"...`,
+                primaryLabel: 'Close',
+                isLoading: true,
+            })
+            reader.readAsText(file)
+            return
+        }
+
+        setPendingImportType(null)
+    }
+
+    const handleCancelSoftDelete = () => {
+        if (softDeleteState.isSubmitting) {
+            return
+        }
+        setSoftDeleteState({
+            open: false,
+            items: [],
+            isSubmitting: false,
+            error: null,
+            successMessage: null,
+        })
+    }
+
+    const handleConfirmSoftDelete = async () => {
+        const tenantName = user?.tenant?.name
+        if (!tenantName || softDeleteState.items.length === 0) {
+            return
+        }
+
+        setSoftDeleteState(prev => ({
+            ...prev,
+            isSubmitting: true,
+            error: null,
+        }))
+
+        try {
+            await delay(2000)
+
+            const resources = softDeleteState.items.map((item) => item.resource)
+            await customAxios.delete(`/v1/${tenantName}/bulk-delete`, {
+                data: {
+                    resources,
+                },
+            })
+
+            const removedCount = resources.length
+
+            setSoftDeleteState({
+                open: true,
+                items: [],
+                isSubmitting: false,
+                error: null,
+                successMessage: `${removedCount} file${removedCount === 1 ? '' : 's'} successfully removed.`,
+            })
+
+            setSelectedFiles([])
+
+            if (rootDirectory?.id) {
+                dispatch(setCurrentDirectory(rootDirectory.id))
+            }
+
+            await dispatch(fetchDirectoryTree(tenantName))
+        } catch (error: unknown) {
+            let message = 'Failed to delete selected items.'
+            if (isAxiosError(error)) {
+                const apiMessage = (error.response?.data as { message?: string } | undefined)?.message
+                if (apiMessage) {
+                    message = apiMessage
+                } else if (error.message) {
+                    message = error.message
+                }
+            } else if (error instanceof Error) {
+                message = error.message
+            }
+
+            setSoftDeleteState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                error: message,
+                successMessage: null,
+            }))
+        }
+    }
+
+    const handleDismissInfoDialog = () => {
+        setInfoDialogState(prev => ({ ...prev, open: false, isLoading: false }))
+    }
+
+    const handleOpenJsonViewer = (resourceId: string, details: ContentItemDetails | null) => {
+        if (!resourceId) {
+            return
+        }
+
+        const tenantName = user?.tenant?.name
+
+        setDetailsState(prev => ({...prev, open: false}))
+        navigate('/tools/json-viewer', {
+            state: {
+                resourceId,
+                metadata: details,
+                tenantName,
+                contentType: details?.contentType,
+                fileExtension: details?.metadata?.fileExtension,
+                version: details?.latestVersion,
+                viewer: 'json' as const,
+            },
+        })
+    }
+
+    const handleRefresh = () => {
+        const tenantName = user?.tenant?.name
+        if (tenantName) {
+            void dispatch(fetchDirectoryTree(tenantName))
+        }
+    }
+
+    const handleToggleNavMenu = () => {
+        setIsNavMenuCollapsed(prev => !prev)
+    }
+
+    return (
+        <div className={styles.appContainer}>
+            {/* Header spans full width */}
+            <Header onToggleNavMenu={handleToggleNavMenu}/>
+
+            {isOverlayNav && !isNavMenuCollapsed && (
+                <div
+                    className={styles.overlayBackdrop}
+                    onClick={() => setIsNavMenuCollapsed(true)}
+                    role="presentation"
+                    aria-hidden="true"
+                />
+            )}
+
+            <div className={styles.mainContainer} style={mainContainerStyle}>
+                {/* Fixed sidebar */}
+                <NavMenu
+                    root={rootDirectory}
+                    onItemSelect={handleItemSelect}
+                    selectedItemId={effectiveDirectory?.id ?? null}
+                    isCollapsed={isNavMenuCollapsed}
+                    isOverlay={isOverlayNav}
+                    onDismissOverlay={() => setIsNavMenuCollapsed(true)}
+                    isLoading={directoryLoading}
+                    error={directoryError}
+                />
+
+                {/* Main content area */}
+                <div className={styles.contentWrapper}>
+                    {/* ActionBar */}
+                    <div className={styles.actionBarWrapper}>
+                        <ActionBar
+                            hasSelection={selectedFiles.length > 0}
+                            onNewDirectory={handleNewDirectory}
+                            disableNewDirectory={!effectiveDirectory || !user?.tenant?.name}
+                            onImportContent={handleImportContent}
+                            onCreateContent={handleCreateContent}
+                            disableImportContent={!effectiveDirectory || !user?.tenant?.name || isImporting}
+                            disableCreateContent={!user?.tenant?.name}
+                            onDeleteContent={handleDeleteContent}
+                            onSeeDetails={handleSeeDetails}
+                            onRefresh={handleRefresh}
+                        />
+                    </div>
+
+                    {/* Main content */}
+                    <div className={styles.mainContent}>
+                        <ContentArea
+                            selectedItem={effectiveDirectory}
+                            selectedFiles={selectedFiles}
+                            onFileSelect={handleFileSelect}
+                            isLoading={directoryLoading}
+                            error={directoryError}
+                        />
+                        {children}
+                    </div>
+                </div>
+            </div>
+
+            {/* Footer spans full width */}
+            <Footer/>
+
+            <CreateDirectoryDialog
+                open={createDirectoryState.open}
+                directoryName={createDirectoryState.name}
+                parentPath={proposedDirectoryPath}
+                isSubmitting={createDirectoryState.isSubmitting}
+                errorMessage={createDirectoryState.error}
+                onNameChange={handleDirectoryNameChange}
+                onCancel={handleCancelCreateDirectory}
+                onSubmit={handleSubmitCreateDirectory}
             />
-          </div>
-
-          {/* Main content */}
-          <div className={styles.mainContent}>
-            <ContentArea
-              selectedItem={selectedItem}
-              selectedFiles={selectedFiles}
-              onFileSelect={handleFileSelect}
+            <SoftDeleteDialog
+                open={softDeleteState.open}
+                items={softDeleteState.items}
+                isSubmitting={softDeleteState.isSubmitting}
+                errorMessage={softDeleteState.error}
+                successMessage={softDeleteState.successMessage}
+                onCancel={handleCancelSoftDelete}
+                onConfirm={handleConfirmSoftDelete}
             />
-            {children}
-          </div>
+            <InfoDialog
+                open={infoDialogState.open}
+                title={infoDialogState.title}
+                description={infoDialogState.description}
+                primaryLabel={infoDialogState.primaryLabel}
+                isLoading={infoDialogState.isLoading}
+                onDismiss={handleDismissInfoDialog}
+            />
+            <input
+                type="file"
+                ref={importFileInputRef}
+                accept={importAccept}
+                style={{ display: 'none' }}
+                onChange={handleImportFileChange}
+            />
+            <FileDetailsModal
+                open={detailsState.open}
+                details={detailsState.data}
+                isLoading={detailsState.isLoading}
+                error={detailsState.error}
+                resourceId={detailsState.resourceId}
+                onClose={handleCloseDetails}
+                onRetry={detailsState.error ? handleRetryDetails : undefined}
+                onOpenJsonViewer={handleOpenJsonViewer}
+            />
         </div>
-      </div>
-
-      {/* Footer spans full width */}
-      <Footer />
-    </div>
-  )
+    )
 }
 
 // Context will be added later if needed for sharing state between components

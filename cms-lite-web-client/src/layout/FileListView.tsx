@@ -9,12 +9,10 @@ import {
   makeStyles,
   tokens,
   Checkbox,
-} from '@fluentui/react-components'
-import {
-  DocumentRegular,
-  FolderRegular,
-} from '@fluentui/react-icons'
+} from '@fluentui/react-components';
+import { DocumentRegular, FolderRegular } from '@fluentui/react-icons'
 import { BREAKPOINTS } from './layoutConstants'
+import type { DirectoryNode, ContentItemNode } from '../types/directories.ts'
 
 const useStyles = makeStyles({
   container: {
@@ -71,32 +69,15 @@ const useStyles = makeStyles({
   },
 })
 
-interface FileItem {
-  id: string
-  name: string
-  type: 'file'
-  version: string
-  size: string
-  lastModified: string
-}
-
-interface NavItem {
-  id: string
-  name: string
-  type: 'folder'
-  children?: NavItem[]
-  files?: FileItem[]
-}
-
 interface FileListViewProps {
-  directory: NavItem
+  directory: DirectoryNode
   selectedFiles: string[]
   onFileSelect: (fileIds: string[]) => void
 }
 
 export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileListViewProps) => {
   const styles = useStyles()
-  const files = directory.files || []
+  const files: ContentItemNode[] = directory.contentItems || []
 
   const handleRowClick = (fileId: string) => {
     if (selectedFiles.includes(fileId)) {
@@ -116,6 +97,10 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
 
   const isAllSelected = files.length > 0 && files.every(file => selectedFiles.includes(file.id))
   const isSomeSelected = files.some(file => selectedFiles.includes(file.id))
+
+  const renderSize = (file: ContentItemNode): string => {
+    return file.size || "N/A";
+  }
 
   return (
     <div className={styles.container}>
@@ -144,7 +129,7 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
                   <Text weight="semibold">File Name</Text>
                 </TableHeaderCell>
                 <TableHeaderCell>
-                  <Text weight="semibold">Id</Text>
+                  <Text weight="semibold">Type</Text>
                 </TableHeaderCell>
                 <TableHeaderCell>
                   <Text weight="semibold">Latest Version</Text>
@@ -172,19 +157,17 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
                     <TableCell>
                       <div className={styles.fileName}>
                         <DocumentRegular className={styles.fileIcon} />
-                        <Text>{file.name}</Text>
+                        <Text>{file.resource}</Text>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
-                        {file.id}
-                      </Text>
+                      <Text>{file.contentType || 'Unknown'}</Text>
                     </TableCell>
                     <TableCell>
-                      <Text>{file.version}</Text>
+                      <Text>{file.latestVersion}</Text>
                     </TableCell>
                     <TableCell>
-                      <Text>{file.size}</Text>
+                      <Text>{renderSize(file)}</Text>
                     </TableCell>
                   </TableRow>
                 )

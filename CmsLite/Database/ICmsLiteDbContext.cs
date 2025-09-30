@@ -12,4 +12,5 @@ public interface ICmsLiteDbContext
     Microsoft.EntityFrameworkCore.DbSet<DbSet.ContentItem> ContentItems { get; }
     Microsoft.EntityFrameworkCore.DbSet<DbSet.ContentVersion> ContentVersions { get; }
     Microsoft.EntityFrameworkCore.DbSet<DbSet.Tenant> Tenants { get; }
+    Microsoft.EntityFrameworkCore.DbSet<DbSet.Directory> Directories { get; }
 }
