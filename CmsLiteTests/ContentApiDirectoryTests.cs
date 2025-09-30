@@ -206,7 +206,7 @@ public class ContentApiDirectoryTests
     }
 
     [Fact]
-    public async Task Put_WithInvalidTenant_ReturnsForbidden()
+    public async Task Put_WithInvalidTenant_ReturnsNotFound()
     {
         using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
@@ -217,7 +217,7 @@ public class ContentApiDirectoryTests
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
         var putResponse = await client.PutAsync("/v1/non-existent-tenant/test-content", requestContent);
-        Assert.Equal(HttpStatusCode.Forbidden, putResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, putResponse.StatusCode);
     }
 
     [Fact]

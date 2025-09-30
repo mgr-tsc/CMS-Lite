@@ -361,13 +361,13 @@ public class DirectoryApiTests
     }
 
     [Fact]
-    public async Task DirectoryEndpoints_InvalidTenant_ReturnsForbidden()
+    public async Task DirectoryEndpoints_InvalidTenant_ReturnsNotFound()
     {
         using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
         var response = await client.GetAsync("/v1/nonexistent-tenant/directories");
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
