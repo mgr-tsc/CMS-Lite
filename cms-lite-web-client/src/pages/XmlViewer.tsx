@@ -39,7 +39,7 @@ import XMLReader from '@uiw/react-xml-reader'
 import { XMLBuilder, XMLParser } from 'fast-xml-parser'
 import { MainLayout } from '../layout'
 import type { ContentItemDetails } from '../types/content'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../contexts'
 import customAxios from '../utilities/custom-axios'
 import {
   selectDirectoryTreeRoot,
