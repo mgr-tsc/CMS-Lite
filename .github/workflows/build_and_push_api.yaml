@@ -75,7 +75,7 @@ jobs:
       - name: Build and (optionally) push
         uses: docker/build-push-action@v6
         with:
-          context: ${{ env.DOCKER_CONTEXT }}
+          context: .
           file: ${{ env.DOCKERFILE }}
           push: ${{ github.event_name != 'workflow_dispatch' || inputs.push != 'false' }}
           tags: ${{ steps.meta.outputs.tags }}
