@@ -10,6 +10,7 @@ A lightweight, multi-tenant JSON content management system with **JWT Authentica
 - **Tenant Isolation**: Users can only access their tenant's content
 - **Session Management**: Active session tracking with revocation support
 - **Password Security**: Secure password hashing and verification
+- **Rate Limiting**: Built-in API rate limiting with configurable policies per endpoint type
 
 ### 📁 Content Management
 - **Multi-tenant**: Content scoped by tenant with authentication-based isolation
@@ -982,6 +983,62 @@ dotnet test --logger "console;verbosity=detailed"
 
 ---
 
+## 🛡️ Rate Limiting
+
+CMS-Lite includes built-in rate limiting to protect against abuse and ensure fair usage across different types of operations.
+
+### Rate Limiting Policies
+
+| Policy | Endpoints | Production Limit | Development Limit | Window | Purpose |
+|--------|-----------|------------------|-------------------|--------|---------|
+| **auth** | `/auth/*` | 10 req/min | 50 req/min | 1 minute | Login, logout, token refresh |
+| **content-read** | `GET /v1/{tenant}/*` | 100 req/min | 500 req/min | 1 minute | Content retrieval operations |
+| **content-write** | `PUT /v1/{tenant}/*` | 50 req/min | 200 req/min | 1 minute | Content creation/updates |
+| **bulk-operations** | `DELETE /v1/{tenant}/bulk-*` | 10 req/min | 50 req/min | 1 minute | Bulk delete operations |
+| **admin** | `/create-tenant`, `/attach-user` | 20 req/min | 50 req/min | 1 minute | Administrative operations |
+
+### Rate Limiting Features
+
+- **Fixed Window Algorithm**: Simple and predictable rate limiting
+- **Per-User Partitioning**: Authenticated users get individual rate limits
+- **IP-Based Partitioning**: Unauthenticated requests are limited by IP address
+- **Configurable Limits**: Different limits for production vs development environments
+- **Helpful Headers**: Rate limit responses include policy name and retry-after information
+- **Queue Support**: Brief queuing for requests that exceed limits
+
+### Rate Limit Headers
+
+When rate limits are exceeded (HTTP 429), the response includes:
+- `X-RateLimit-Policy`: The policy that was exceeded
+- `Retry-After`: Seconds to wait before retrying (60 seconds)
+
+### Configuration
+
+Rate limits are configured in `appsettings.json`:
+
+```json
+{
+  "RateLimiting": {
+    "Auth": {
+      "PermitLimit": 10,
+      "WindowMinutes": 1,
+      "QueueLimit": 2
+    },
+    "ContentRead": {
+      "PermitLimit": 100,
+      "WindowMinutes": 1,
+      "QueueLimit": 5
+    }
+  }
+}
+```
+
+**Environment-specific overrides:**
+- **Development**: Higher limits for easier testing
+- **Production**: Stricter limits for security and performance
+
+---
+
 ## 🔒 Security Features
 
 ### Authentication & Authorization
@@ -999,7 +1056,7 @@ dotnet test --logger "console;verbosity=detailed"
 - **HTTPS Only**: All traffic encrypted in production
 - **Secret Management**: JWT keys via environment variables
 - **CORS**: Configured for frontend domain
-- **Rate Limiting**: Planned for authentication endpoints
+- **Rate Limiting**: Implemented with configurable policies for different endpoint types
 
 ---
 
