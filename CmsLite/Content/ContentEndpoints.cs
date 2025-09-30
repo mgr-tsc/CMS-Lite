@@ -28,7 +28,7 @@ public static class ContentEndpoints
             // Validate content type is specified
             if (string.IsNullOrEmpty(req.ContentType))
             {
-                return Results.BadRequest("Content-Type header is required. Supported types: application/json, application/xml, text/xml");
+                return Results.BadRequest("Content-Type header is required. Supported types: application/json, application/xml, text/xml, application/pdf");
             }
 
             // Parse and validate supported content type
@@ -51,6 +51,7 @@ public static class ContentEndpoints
             {
                 SupportedContentType.Json => Utilities.IsValidJson(bytes),
                 SupportedContentType.Xml => Utilities.IsValidXml(bytes),
+                SupportedContentType.Pdf => Utilities.IsValidPdf(bytes),
                 _ => false
             };
 
@@ -117,7 +118,13 @@ public static class ContentEndpoints
                             DirectoryId = directoryId,
                             Resource = resource,
                             LatestVersion = nextVersion,
-                            ContentType = contentType == SupportedContentType.Json ? "application/json" : "application/xml",
+                            ContentType = contentType switch
+                            {
+                                SupportedContentType.Json => "application/json",
+                                SupportedContentType.Xml => "application/xml",
+                                SupportedContentType.Pdf => "application/pdf",
+                                _ => "application/json"
+                            },
                             ByteSize = size,
                             Sha256 = sha256,
                             ETag = etag,
@@ -135,7 +142,13 @@ public static class ContentEndpoints
                         item.ETag = etag;
                         item.UpdatedAtUtc = DateTime.UtcNow;
                         item.IsDeleted = false;
-                        item.ContentType = contentType == SupportedContentType.Json ? "application/json" : "application/xml";
+                        item.ContentType = contentType switch
+                        {
+                            SupportedContentType.Json => "application/json",
+                            SupportedContentType.Xml => "application/xml",
+                            SupportedContentType.Pdf => "application/pdf",
+                            _ => "application/json"
+                        };
                     }
                     // Create version history record
                     db.ContentVersionsTable.Add(new DbSet.ContentVersion
@@ -204,7 +217,12 @@ public static class ContentEndpoints
 
             var v = version ?? latest.LatestVersion;
             // Determine blob key based on stored content type
-            var contentTypeEnum = latest.ContentType == "application/xml" ? SupportedContentType.Xml : SupportedContentType.Json;
+            var contentTypeEnum = latest.ContentType switch
+            {
+                "application/xml" => SupportedContentType.Xml,
+                "application/pdf" => SupportedContentType.Pdf,
+                _ => SupportedContentType.Json
+            };
             var blobKey = Utilities.GenerateBlobKey(tenant, resource, v, contentTypeEnum);
             var blob = await blobs.DownloadAsync(blobKey);
             if (blob == null) return Results.NotFound();
@@ -240,7 +258,12 @@ public static class ContentEndpoints
 
             var v = version ?? latest.LatestVersion;
             // Determine blob key based on stored content type
-            var contentTypeEnum = latest.ContentType == "application/xml" ? SupportedContentType.Xml : SupportedContentType.Json;
+            var contentTypeEnum = latest.ContentType switch
+            {
+                "application/xml" => SupportedContentType.Xml,
+                "application/pdf" => SupportedContentType.Pdf,
+                _ => SupportedContentType.Json
+            };
             var blobKey = Utilities.GenerateBlobKey(tenant, resource, v, contentTypeEnum);
             var head = await blobs.HeadAsync(blobKey);
             if (head == null) return Results.NotFound();

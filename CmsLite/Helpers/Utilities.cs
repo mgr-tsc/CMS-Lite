@@ -10,7 +10,8 @@ public enum FileSizeUnit
 public enum SupportedContentType
 {
     Json,
-    Xml
+    Xml,
+    Pdf
 }
 
 public class Utilities
@@ -67,6 +68,22 @@ public class Utilities
         }
     }
 
+    public static bool IsValidPdf(byte[] data)
+    {
+        // PDF files must start with the PDF magic bytes: %PDF- (0x25 0x50 0x44 0x46 0x2D)
+        if (data == null || data.Length < 5)
+        {
+            return false;
+        }
+
+        // Check for PDF signature at the start
+        return data[0] == 0x25 && // %
+               data[1] == 0x50 && // P
+               data[2] == 0x44 && // D
+               data[3] == 0x46 && // F
+               data[4] == 0x2D;   // -
+    }
+
     public static bool IsValidJsonWithComments(byte[] data)
     {
         var options = new System.Text.Json.JsonDocumentOptions
@@ -118,7 +135,8 @@ public class Utilities
             "application/json" => SupportedContentType.Json,
             "application/xml" => SupportedContentType.Xml,
             "text/xml" => SupportedContentType.Xml,
-            _ => throw new ArgumentException($"Unsupported content type '{mediaType}'. Only 'application/json', 'application/xml', and 'text/xml' are supported.")
+            "application/pdf" => SupportedContentType.Pdf,
+            _ => throw new ArgumentException($"Unsupported content type '{mediaType}'. Only 'application/json', 'application/xml', 'text/xml', and 'application/pdf' are supported.")
         };
     }
 

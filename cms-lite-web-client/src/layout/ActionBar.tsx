@@ -53,11 +53,13 @@ const useStyles = makeStyles({
   },
 })
 
+type ImportContentType = 'json' | 'xml' | 'pdf'
+
 interface ActionBarProps {
   hasSelection: boolean
   onNewDirectory?: () => void
   disableNewDirectory?: boolean
-  onImportContent?: (type: 'json' | 'xml') => void
+  onImportContent?: (type: ImportContentType) => void
   onCreateContent?: (type: 'json' | 'xml') => void
   disableImportContent?: boolean
   disableCreateContent?: boolean
@@ -101,12 +103,13 @@ export const ActionBar = ({
             </Button>
           </MenuTrigger>
           <MenuPopover>
-            <MenuList>
-              <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
-              <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
-            </MenuList>
-          </MenuPopover>
-        </Menu>
+          <MenuList>
+            <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
+            <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
+            <MenuItem onClick={() => onImportContent?.('pdf')}>PDF</MenuItem>
+          </MenuList>
+        </MenuPopover>
+      </Menu>
 
         <Button
           icon={<ArrowSyncRegular />}

@@ -170,7 +170,7 @@ public class DirectoryTreeApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task GetDirectoryTree_InvalidTenant_ReturnsNotFound()
+    public async Task GetDirectoryTree_InvalidTenant_ReturnsForbidden()
     {
         await factory.InitializeAsync();
 
