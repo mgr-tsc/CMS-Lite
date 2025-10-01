@@ -71,7 +71,10 @@ dev.env
 .env.local
 __azurite*.json
 __blobstorage__/
-
+deploy-azure.sh
+deploy-azure-qa.sh
+azuredeploy.json
+azuredeploy-qa.json
 CmsLite/cms.sqlite
 CmsLite/cms.sqlite-*
 *.csx
