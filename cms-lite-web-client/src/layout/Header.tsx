@@ -1,6 +1,6 @@
 import { Text, Caption1, Button, makeStyles, tokens } from '@fluentui/react-components'
 import { SignOutRegular, NavigationRegular } from '@fluentui/react-icons'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../contexts'
 import { BREAKPOINTS } from './layoutConstants'
 
 const useStyles = makeStyles({
@@ -91,8 +91,8 @@ export const Header = ({ onToggleNavMenu }: HeaderProps) => {
           />
         )}
         <div className={styles.titleSection}>
-          <Text as="h1" size={800} weight="bold">
-            CMS Lite - Content Management System
+          <Text as="h2" size={800} weight="bold" style={{marginBottom: 1}}>
+            FileKeeper
           </Text>
           <Caption1>Manage your dynamic content with ease</Caption1>
         </div>

@@ -21,7 +21,8 @@ public static class ContentEndpoints
             HttpRequest req,
             CmsLiteDbContext db,
             IBlobRepo blobs,
-            IDirectoryRepo directoryRepo) =>
+            IDirectoryRepo directoryRepo,
+            ILogger<Program> logger) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
@@ -47,17 +48,38 @@ public static class ContentEndpoints
             if (bytes.Length == 0) return Results.BadRequest("Empty body.");
 
             // Validate content format
-            var isValidContent = contentType switch
+            if (contentType == SupportedContentType.Pdf)
             {
-                SupportedContentType.Json => Utilities.IsValidJson(bytes),
-                SupportedContentType.Xml => Utilities.IsValidXml(bytes),
-                SupportedContentType.Pdf => Utilities.IsValidPdf(bytes),
-                _ => false
-            };
+                // Use comprehensive PDF validation with PdfSharp
+                var pdfValidationOptions = new PdfValidationOptions
+                {
+                    MaxFileSizeBytes = 8388608, // 8 MB
+                    MaxPageCount = 1000,
+                    AllowPasswordProtected = false,
+                    ScanForEmbeddedFiles = true,
+                    ScanForJavaScript = true
+                };
 
-            if (!isValidContent)
+                var pdfValidationResult = PdfValidator.ValidatePdf(bytes, pdfValidationOptions, logger);
+                if (!pdfValidationResult.IsValid)
+                {
+                    return Results.BadRequest(pdfValidationResult.ErrorMessage);
+                }
+            }
+            else
             {
-                return Results.BadRequest($"Invalid {contentType.ToString().ToLower()} content format.");
+                // Use basic validation for JSON and XML
+                var isValidContent = contentType switch
+                {
+                    SupportedContentType.Json => Utilities.IsValidJson(bytes),
+                    SupportedContentType.Xml => Utilities.IsValidXml(bytes),
+                    _ => false
+                };
+
+                if (!isValidContent)
+                {
+                    return Results.BadRequest($"Invalid {contentType.ToString().ToLower()} content format.");
+                }
             }
 
             // Calculate content integrity hash

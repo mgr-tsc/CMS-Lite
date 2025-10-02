@@ -149,6 +149,28 @@ const buildPathString = (segments: string[]): string => {
     return `/${segments.join('/')}`
 }
 
+const extractFilenameFromContentDisposition = (header?: string | null): string | null => {
+    if (!header) {
+        return null
+    }
+
+    const filenameStarMatch = /filename\*=UTF-8''([^;]+)/i.exec(header)
+    if (filenameStarMatch?.[1]) {
+        try {
+            return decodeURIComponent(filenameStarMatch[1])
+        } catch (error) {
+            console.warn('Failed to decode filename from content-disposition.', error)
+        }
+    }
+
+    const quotedMatch = /filename="?([^";]+)"?/i.exec(header)
+    if (quotedMatch?.[1]) {
+        return quotedMatch[1]
+    }
+
+    return null
+}
+
 const appendPathSegment = (basePath: string, segment: string): string => {
     const trimmedSegment = segment.trim()
     if (!trimmedSegment) {
@@ -204,6 +226,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
     const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | 'pdf' | null>(null)
     const [importAccept, setImportAccept] = useState('')
     const [isImporting, setIsImporting] = useState(false)
+    const [isDownloading, setIsDownloading] = useState(false)
     const [infoDialogState, setInfoDialogState] = useState<InfoDialogState>({
         open: false,
         title: 'Coming soon',
@@ -307,6 +330,149 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             primaryLabel: 'Close',
             isLoading: false,
         })
+    }
+
+    const handleDownloadContent = async () => {
+        if (selectedFiles.length !== 1 || !effectiveDirectory || !user?.tenant?.name || isDownloading) {
+            return
+        }
+
+        const fileId = selectedFiles[0]
+        const contentItem = effectiveDirectory.contentItems.find((item) => item.id === fileId)
+
+        if (!contentItem) {
+            return
+        }
+
+        const tenantName = user.tenant.name
+        const resourcePath = contentItem.resource
+
+        setIsDownloading(true)
+        setInfoDialogState({
+            open: true,
+            title: 'Downloading file',
+            description: `Preparing download for "${resourcePath}"...`,
+            primaryLabel: 'Close',
+            isLoading: true,
+        })
+
+        try {
+            const response = await customAxios.get(`/v1/${tenantName}/${encodeURIComponent(resourcePath)}`, {
+                responseType: 'blob',
+            })
+
+            const contentType = response.headers['content-type'] as string | undefined
+            const contentDisposition = response.headers['content-disposition'] as string | undefined
+            const fallbackName = resourcePath.split('/').pop() ?? resourcePath
+            const downloadName =
+                extractFilenameFromContentDisposition(contentDisposition) ?? fallbackName
+
+            if (contentType?.includes('application/json')) {
+                const payloadText = await response.data.text()
+                const jsonDownloadName = downloadName.endsWith('.json')
+                    ? downloadName
+                    : `${downloadName}.json`
+                try {
+                    const payload = JSON.parse(payloadText) as { downloadUrl?: string; message?: string }
+                    if (payload?.downloadUrl) {
+                        const link = document.createElement('a')
+                        link.href = payload.downloadUrl
+                        link.target = '_blank'
+                        link.rel = 'noopener'
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+
+                        setInfoDialogState({
+                            open: true,
+                            title: 'Download ready',
+                            description: 'The file is downloading in a new tab.',
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                        return
+                    }
+
+                    // Treat as a JSON file payload when metadata is not provided.
+                    const blob = new Blob([payloadText], {
+                        type: contentType ?? 'application/json',
+                    })
+                    const blobUrl = window.URL.createObjectURL(blob)
+                    const link = document.createElement('a')
+                    link.href = blobUrl
+                    link.download = jsonDownloadName
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    window.URL.revokeObjectURL(blobUrl)
+
+                    setInfoDialogState({
+                        open: true,
+                        title: 'Download complete',
+                        description: `File "${jsonDownloadName}" downloaded successfully.`,
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                    return
+                } catch {
+                    const blob = new Blob([payloadText], {
+                        type: contentType ?? 'application/json',
+                    })
+                    const blobUrl = window.URL.createObjectURL(blob)
+                    const link = document.createElement('a')
+                    link.href = blobUrl
+                    link.download = jsonDownloadName
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    window.URL.revokeObjectURL(blobUrl)
+
+                    setInfoDialogState({
+                        open: true,
+                        title: 'Download complete',
+                        description: `File "${jsonDownloadName}" downloaded successfully.`,
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                    return
+                }
+            }
+
+            const blob = response.data as Blob
+            const blobUrl = window.URL.createObjectURL(blob)
+
+            const link = document.createElement('a')
+            link.href = blobUrl
+            link.download = downloadName
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(blobUrl)
+
+            setInfoDialogState({
+                open: true,
+                title: 'Download complete',
+                description: `File "${downloadName}" downloaded successfully.`,
+                primaryLabel: 'Close',
+                isLoading: false,
+            })
+        } catch (error) {
+            console.error('Failed to download file', error)
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to download the selected file. Please try again.'
+
+            setInfoDialogState({
+                open: true,
+                title: 'Download failed',
+                description: `Download failed. ${message}`,
+                primaryLabel: 'Close',
+                isLoading: false,
+            })
+        } finally {
+            setIsDownloading(false)
+        }
     }
 
     const handleDeleteContent = () => {
@@ -693,8 +859,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                         primaryLabel: 'Close',
                         isLoading: false,
                     })
-                } catch (error) {
-                    console.error('Failed to import PDF file', error)
+                } catch {
                     setInfoDialogState({
                         open: true,
                         title: 'PDF upload failed',
@@ -883,6 +1048,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                             onImportContent={handleImportContent}
                             onCreateContent={handleCreateContent}
                             disableImportContent={!effectiveDirectory || !user?.tenant?.name || isImporting}
+                            canDownload={selectedFiles.length === 1 && !isDownloading}
+                            onDownloadContent={handleDownloadContent}
                             disableCreateContent={!user?.tenant?.name}
                             onDeleteContent={handleDeleteContent}
                             onSeeDetails={handleSeeDetails}
