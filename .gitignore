@@ -80,3 +80,4 @@ CmsLite/cms.sqlite-*
 *.csx
 .env.local
 AGENTS.md
+azure_cli.md
