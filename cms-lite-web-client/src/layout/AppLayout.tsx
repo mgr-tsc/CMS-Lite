@@ -859,8 +859,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                         primaryLabel: 'Close',
                         isLoading: false,
                     })
-                } catch (error) {
-                    console.error('Failed to import PDF file', error)
+                } catch {
                     setInfoDialogState({
                         open: true,
                         title: 'PDF upload failed',

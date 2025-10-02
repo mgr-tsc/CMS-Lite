@@ -94,7 +94,7 @@ public static class PdfValidator
             try
             {
                 using var ms = new MemoryStream(data);
-                document = PdfReader.Open(ms, PdfDocumentOpenMode.InformationOnly);
+                document = PdfReader.Open(ms, PdfDocumentOpenMode.Import);
             }
             catch (PdfReaderException ex)
             {
@@ -105,6 +105,11 @@ public static class PdfValidator
             {
                 logger?.LogWarning(ex, "PDF validation failed: Invalid PDF operation");
                 return PdfValidationResult.Failure($"Invalid PDF format: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Unexpected error during PDF validation");
+                return PdfValidationResult.Failure($"PDF validation failed: {ex.Message}");
             }
 
             // 4. Structural validation

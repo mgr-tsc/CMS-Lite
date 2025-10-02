@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
 using CmsLiteTests.Support;
+using PdfSharp.Pdf;
+using PdfSharp.Drawing;
 using Xunit;
 
 namespace CmsLiteTests;
@@ -11,13 +13,18 @@ public class ContentApiPdfTests : IAsyncDisposable
 
     public async ValueTask DisposeAsync() => await factory.DisposeAsync();
 
-    // Helper method to create a valid PDF file (minimal PDF structure)
+    // Helper method to create a valid PDF file using PdfSharp
     private static byte[] CreateValidPdf(string content = "Test PDF content")
     {
-        var pdfHeader = "%PDF-1.4\n";
-        var pdfBody = $"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length {content.Length} >>\nstream\n{content}\nendstream\nendobj\n";
-        var pdfTrailer = "xref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000056 00000 n\n0000000115 00000 n\n0000000184 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n284\n%%EOF\n";
-        return Encoding.UTF8.GetBytes(pdfHeader + pdfBody + pdfTrailer);
+        using var document = new PdfDocument();
+        document.Info.Title = content; // Store content in metadata instead
+
+        // Add a blank page - this creates a valid, parseable PDF structure
+        document.AddPage();
+
+        using var ms = new MemoryStream();
+        document.Save(ms, false);
+        return ms.ToArray();
     }
 
     [Fact]
@@ -55,7 +62,7 @@ public class ContentApiPdfTests : IAsyncDisposable
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Invalid PDF content format", content);
+        Assert.Contains("Invalid PDF header", content);
     }
 
     [Fact]
@@ -250,5 +257,81 @@ public class ContentApiPdfTests : IAsyncDisposable
             new ByteArrayContent(pdfBytes) { Headers = { ContentType = new("application/pdf") } });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadPdf_CorruptedPdf_ReturnsBadRequest()
+    {
+        await factory.InitializeAsync();
+        var client = factory.CreateClient();
+        var token = factory.GenerateTestJwtToken();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+        // Create corrupted PDF with valid header but invalid structure
+        var corruptedPdf = Encoding.UTF8.GetBytes("%PDF-1.4\nCorrupted content without proper PDF structure");
+        var response = await client.PutAsync($"/v1/{factory.TestTenant}/corrupted.pdf",
+            new ByteArrayContent(corruptedPdf) { Headers = { ContentType = new("application/pdf") } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("PDF validation failed", content);
+    }
+
+    [Fact]
+    public async Task UploadPdf_ExceedsMaxFileSize_ReturnsBadRequest()
+    {
+        await factory.InitializeAsync();
+        var client = factory.CreateClient();
+        var token = factory.GenerateTestJwtToken();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+        // Create a large byte array that exceeds 8 MB limit (8388608 bytes)
+        var largePdfContent = new byte[8388609]; // 8 MB + 1 byte
+        Array.Copy(Encoding.UTF8.GetBytes("%PDF-1.4"), largePdfContent, 8);
+
+        var response = await client.PutAsync($"/v1/{factory.TestTenant}/large.pdf",
+            new ByteArrayContent(largePdfContent) { Headers = { ContentType = new("application/pdf") } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("exceeds maximum allowed size", content);
+    }
+
+    [Fact]
+    public async Task UploadPdf_PdfWithNoPages_ReturnsBadRequest()
+    {
+        await factory.InitializeAsync();
+        var client = factory.CreateClient();
+        var token = factory.GenerateTestJwtToken();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+        // Create minimal PDF structure with no pages
+        var noPagesContent = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\nxref\n0 2\n0000000000 65535 f\n0000000009 00000 n\ntrailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n50\n%%EOF\n";
+        var noPagesBytes = Encoding.UTF8.GetBytes(noPagesContent);
+
+        var response = await client.PutAsync($"/v1/{factory.TestTenant}/no-pages.pdf",
+            new ByteArrayContent(noPagesBytes) { Headers = { ContentType = new("application/pdf") } });
+
+        // This should fail validation - either "no pages" or structure error
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.True(content.Contains("no pages") || content.Contains("Invalid or corrupted PDF structure"));
+    }
+
+    [Fact]
+    public async Task UploadPdf_ValidMinimalPdf_Success()
+    {
+        await factory.InitializeAsync();
+        var client = factory.CreateClient();
+        var token = factory.GenerateTestJwtToken();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+        // Use the helper method to create a valid minimal PDF
+        var validPdf = CreateValidPdf("Minimal test content");
+
+        var response = await client.PutAsync($"/v1/{factory.TestTenant}/minimal-valid.pdf",
+            new ByteArrayContent(validPdf) { Headers = { ContentType = new("application/pdf") } });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 }
