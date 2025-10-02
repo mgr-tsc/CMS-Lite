@@ -144,6 +144,51 @@ All content endpoints require **Bearer token authentication** and enforce **tena
 
 ---
 
+### 🎯 Resource Name Sanitization - Quick Reference Card
+
+**The 9 Golden Rules** - Applied consistently across backend (.NET) and frontend (TypeScript):
+
+| # | Rule | Example |
+|---|------|---------|
+| 1️⃣ | **Preserve file extensions** | `Clean Code.pdf` → `clean-code.pdf` ✅ |
+| 2️⃣ | **Lowercase everything** | `FILE.PDF` → `file.pdf` ✅ |
+| 3️⃣ | **Replace spaces with hyphens** | `my file.json` → `my-file.json` ✅ |
+| 4️⃣ | **Keep underscores** | `my_file.pdf` → `my_file.pdf` ✅ |
+| 5️⃣ | **Remove non-ASCII characters** | `café.json` → `caf.json` ✅ |
+| 6️⃣ | **Keep only: a-z, 0-9, -, _, .** | `file!@#.pdf` → `file.pdf` ✅ |
+| 7️⃣ | **Collapse consecutive hyphens** | `file---name.pdf` → `file-name.pdf` ✅ |
+| 8️⃣ | **Trim leading/trailing hyphens** | `--file--.pdf` → `file-.pdf` ✅ |
+| 9️⃣ | **Fallback to `resource` when empty** | `###.pdf` → `resource.pdf` ✅ |
+
+---
+
+### ⚡ Quick Examples
+
+```javascript
+"Clean Code.pdf"                        → "clean-code.pdf"
+"Annual Report (Q4) 2024!.json"        → "annual-report-q4-2024.json"
+"My   Document   File.xml"             → "my-document-file.xml"
+"SHOUTING.PDF"                         → "shouting.pdf"
+"café-résumé.pdf"                      → "caf-rsum.pdf"
+"API_v2 Draft!!.json"                  → "api_v2-draft.json"
+"Clean Code!!! - Best Book (2024).pdf" → "clean-code-best-book-2024.pdf"
+"!@#$.pdf"                             → "resource.pdf"
+```
+
+---
+
+### 🚫 Common Mistakes
+
+| ❌ Wrong | ✅ Correct | Issue |
+|---------|-----------|-------|
+| `clean-code` | `clean-code.pdf` | Extensions must be preserved |
+| `cafe.json` | `caf.json` | Remove non-ASCII chars, don't transliterate |
+| `api-v2.pdf` | `api_v2.pdf` | Underscores are kept, not replaced |
+| `file-(2024).json` | `file-2024.json` | Special characters removed |
+
+---
+
+
 ## 📮 Postman API Testing
 
 ### Complete Authentication & Content Workflow
