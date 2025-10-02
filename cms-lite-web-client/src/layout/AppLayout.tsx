@@ -31,6 +31,7 @@ import {CreateDirectoryDialog} from '../components/CreateDirectoryDialog'
 import {SoftDeleteDialog, type SoftDeleteItem} from '../components/SoftDeleteDialog'
 import {InfoDialog} from '../components/modals/InfoDialog'
 import customAxios from '../utilities/custom-axios'
+import {sanitizeResourceName} from '../utilities/resource-name'
 import type {ContentItemDetails} from '../types/content'
 
 const useStyles = makeStyles({
@@ -679,7 +680,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
 
         const tenantName = user.tenant.name
 
-        const targetPath = appendPathSegment(parentPathDisplay, file.name)
+        const sanitizedResourceName = sanitizeResourceName(file.name)
+        const targetPath = appendPathSegment(parentPathDisplay, sanitizedResourceName)
 
         if (pendingImportType === 'json') {
             const reader = new FileReader()
@@ -692,7 +694,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                                 : new TextDecoder().decode(reader.result as ArrayBuffer)
 
                         JSON.parse(text)
-                        const resourceName = file.name.replace(/\.json$/i, '') || file.name
+                        const resourceName = sanitizedResourceName
 
                         await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
                             headers: {
@@ -768,7 +770,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                             throw new Error('Invalid XML format')
                         }
 
-                        const resourceName = file.name.replace(/\.xml$/i, '') || file.name
+                        const resourceName = sanitizedResourceName
 
                         await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
                             headers: {
@@ -837,7 +839,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
 
             void (async () => {
                 try {
-                    const resourceName = file.name.replace(/\.pdf$/i, '') || file.name
+                    const resourceName = sanitizedResourceName
 
                     await customAxios.put(
                         `/v1/${tenantName}/${encodeURIComponent(resourceName)}`,

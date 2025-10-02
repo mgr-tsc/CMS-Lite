@@ -142,7 +142,49 @@ All content endpoints require **Bearer token authentication** and enforce **tena
 
 **Security Note**: Directory structure is not exposed in URLs for security. Directory assignment uses secure header-based approach.
 
+--- 
+
+### 🎯 Resource Name Sanitization - Quick Reference Card. The 8 Golden Rules
+
+| # | Rule | Example |
+|---|------|---------|
+| 1️⃣ | **Strip known extensions before slugging** | `Clean Code.pdf` → slug from `Clean Code` |
+| 2️⃣ | **Lowercase everything** | `FILE` → `file` ✅ |
+| 3️⃣ | **Replace whitespace & underscores with hyphens** | `my_file name` → `my-file-name` ✅ |
+| 4️⃣ | **Remove diacritics** | `café` → `cafe` → `caf` ✅ |
+| 5️⃣ | **Drop everything except a-z, 0-9, and hyphen** | `file!@#` → `file` ✅ |
+| 6️⃣ | **Collapse consecutive hyphens** | `file---name` → `file-name` ✅ |
+| 7️⃣ | **Trim leading/trailing hyphens** | `--file--` → `file` ✅ |
+| 8️⃣ | **Fallback to `resource` when empty** | `###` → `resource` ✅ |
+
 ---
+
+### ⚡ Quick Examples
+
+```javascript
+"Clean Code.pdf"                        → "clean-code"
+"Annual Report (Q4) 2024!.json"        → "annual-report-q4-2024"
+"My   Document   File.xml"             → "my-document-file"
+"SHOUTING.PDF"                         → "shouting"
+"café-résumé.pdf"                      → "caf-resume" → "caf-resume" → "caf-resume" (diacritics removed)
+"API_v2 Draft!!.json"                  → "api-v2-draft"
+"Clean Code!!! - Best Book (2024).pdf" → "clean-code-best-book-2024"
+"!@#$.pdf"                             → "resource"
+```
+
+---
+
+### 🚫 Common Mistakes
+
+| ❌ Wrong | ✅ Correct | Issue |
+|---------|-----------|-------|
+| `clean-code.pdf` | `clean-code` | Extensions should be removed before slugging |
+| `cafe` | `caf` | Drop diacritics entirely, do not transliterate |
+| `api_v2` | `api-v2` | Underscores become hyphens |
+| `file-(2024)` | `file-2024` | Special characters stripped |
+
+---
+
 
 ## 📮 Postman API Testing
 

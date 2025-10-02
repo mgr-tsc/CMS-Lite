@@ -142,7 +142,7 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: tokens.colorNeutralBackground2,
-    minHeight: '320px',
+    //minHeight: '320px',
     overflow: 'hidden',
   },
   viewerContainer: {
@@ -584,7 +584,7 @@ export const XmlViewer = () => {
               header={<Text weight="semibold">XML Input</Text>}
               description="Paste or edit the payload, then format to refresh the viewer."
             />
-            <div className={styles.inputCardBody}>
+            <div className={styles.inputCardBody} >
               <Textarea
                 className={styles.textarea}
                 value={input}

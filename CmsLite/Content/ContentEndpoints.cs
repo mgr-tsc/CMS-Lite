@@ -236,15 +236,24 @@ public static class ContentEndpoints
             var latest = await db.ContentItemsTable
                 .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource && x.IsDeleted == false);
             if (latest == null) return Results.NotFound();
-
             var v = version ?? latest.LatestVersion;
             // Determine blob key based on stored content type
-            var contentTypeEnum = latest.ContentType switch
+            SupportedContentType contentTypeEnum;
+            switch (latest.ContentType)
             {
-                "application/xml" => SupportedContentType.Xml,
-                "application/pdf" => SupportedContentType.Pdf,
-                _ => SupportedContentType.Json
-            };
+                case "application/json":
+                    contentTypeEnum = SupportedContentType.Json;
+                    break;
+                case "application/xml":
+                    contentTypeEnum = SupportedContentType.Xml;
+                    break;
+                case "application/pdf":
+                    contentTypeEnum = SupportedContentType.Pdf;
+                    break;
+                default:
+                    return Results.BadRequest($"Unsupported content type: {latest.ContentType}");
+            }
+            
             var blobKey = Utilities.GenerateBlobKey(tenant, resource, v, contentTypeEnum);
             var blob = await blobs.DownloadAsync(blobKey);
             if (blob == null) return Results.NotFound();
