@@ -1109,6 +1109,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 accept={importAccept}
                 style={{ display: 'none' }}
                 onChange={handleImportFileChange}
+                disabled={isImporting}
+                aria-label='Import file input'
             />
             <FileDetailsModal
                 open={detailsState.open}
