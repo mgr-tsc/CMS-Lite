@@ -19,7 +19,7 @@ import {
 import {PersonRegular, LockClosedRegular, EyeRegular, EyeOffRegular} from '@fluentui/react-icons'
 import {useAuth} from '../contexts'
 //import {FileKeeperIllustration} from '../components/icons/FileKeeperIllustration'
-import {FileKeeper} from "../components/icons/FileKeeper.tsx";
+import {FileKeeper} from "../components/icons/FileKeeper";
 
 const useStyles = makeStyles({
     root: {
