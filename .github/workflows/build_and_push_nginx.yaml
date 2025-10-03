@@ -27,7 +27,7 @@ jobs:
 
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}-nginx
+      IMAGE_NAME: ${{ github.repository }}-nginx-aci
 
     steps:
       - name: Checkout code
