@@ -3,12 +3,13 @@ using CmsLite.Database.Repositories;
 using CmsLite.Helpers;
 using CmsLite.Helpers.RequestMappers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Routing;
 
 namespace CmsLite.Content;
 
 public static class DirectoryEndpoints
 {
-    public static void MapDirectoryEndpoints(this WebApplication app)
+    public static void MapDirectoryEndpoints(this IEndpointRouteBuilder app)
     {
         var directoryGroup = app.MapGroup("/v1/{tenant}/directories").WithTags("Directory Management");
 

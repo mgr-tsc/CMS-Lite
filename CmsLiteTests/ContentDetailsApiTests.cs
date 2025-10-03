@@ -23,13 +23,13 @@ public class ContentDetailsApiTests : IAsyncDisposable
 
         // Create content first
         var contentData = JsonSerializer.Serialize(new { message = "Test content for details", timestamp = DateTime.UtcNow });
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-resource.json",
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-resource.json",
             new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
 
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
         // Get detailed information
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/test-resource.json/details");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/test-resource.json/details");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -78,18 +78,18 @@ public class ContentDetailsApiTests : IAsyncDisposable
 
         // Create initial content
         var contentV1 = JsonSerializer.Serialize(new { version = 1, data = "first version" });
-        var putResponse1 = await client.PutAsync($"/v1/{factory.TestTenant}/versioned-resource",
+        var putResponse1 = await client.PutAsync($"/api/v1/{factory.TestTenant}/versioned-resource",
             new StringContent(contentV1, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse1.StatusCode == HttpStatusCode.OK || putResponse1.StatusCode == HttpStatusCode.Created);
 
         // Update content to create version 2
         var contentV2 = JsonSerializer.Serialize(new { version = 2, data = "second version with more data" });
-        var putResponse2 = await client.PutAsync($"/v1/{factory.TestTenant}/versioned-resource",
+        var putResponse2 = await client.PutAsync($"/api/v1/{factory.TestTenant}/versioned-resource",
             new StringContent(contentV2, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse2.StatusCode == HttpStatusCode.OK || putResponse2.StatusCode == HttpStatusCode.Created);
 
         // Get detailed information
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/versioned-resource/details");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/versioned-resource/details");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -123,7 +123,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
         var token = factory.GenerateTestJwtToken();
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/nonexistent-resource/details");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/nonexistent-resource/details");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -136,7 +136,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
         var token = factory.GenerateTestJwtToken();
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
-        var response = await client.GetAsync("/v1/invalid-tenant/test-resource/details");
+        var response = await client.GetAsync("/api/v1/invalid-tenant/test-resource/details");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -147,7 +147,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/test-resource/details");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/test-resource/details");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -162,16 +162,16 @@ public class ContentDetailsApiTests : IAsyncDisposable
 
         // Create content
         var contentData = JsonSerializer.Serialize(new { message = "Content to be deleted" });
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/deleted-resource",
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/deleted-resource",
             new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
         // Delete the content
-        var deleteResponse = await client.DeleteAsync($"/v1/{factory.TestTenant}/deleted-resource");
+        var deleteResponse = await client.DeleteAsync($"/api/v1/{factory.TestTenant}/deleted-resource");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
         // Try to get details of deleted content
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/deleted-resource/details");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/deleted-resource/details");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -205,7 +205,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
 
         // Create content in subdirectory
         var contentData = JsonSerializer.Serialize(new { location = "subdirectory" });
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/subdir-resource")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/subdir-resource")
         {
             Content = new StringContent(contentData, System.Text.Encoding.UTF8, "application/json")
         };
@@ -215,7 +215,7 @@ public class ContentDetailsApiTests : IAsyncDisposable
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
         // Get details
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/subdir-resource/details");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/subdir-resource/details");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();

@@ -25,7 +25,7 @@ public class ContentApiTests
         var byteLength = Encoding.UTF8.GetByteCount(payloadJson);
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/home", requestContent);
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/home", requestContent);
         Assert.Equal(HttpStatusCode.Created, putResponse.StatusCode);
 
         var created = await putResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -39,7 +39,7 @@ public class ContentApiTests
         var sha = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson)));
         Assert.Equal(sha, created.GetProperty("sha256").GetString());
 
-        var getResponse = await client.GetAsync($"/v1/{factory.TestTenant}/home");
+        var getResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/home");
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         Assert.Equal("application/json", getResponse.Content.Headers.ContentType?.MediaType);
         Assert.True(getResponse.Headers.TryGetValues("ETag", out var etagValues));
@@ -63,9 +63,9 @@ public class ContentApiTests
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
-        await client.PutAsync($"/v1/{factory.TestTenant}/page-mismatch", CreateJsonContent(new { version = 1 }));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/page-mismatch", CreateJsonContent(new { version = 1 }));
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/page-mismatch")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/page-mismatch")
         {
             Content = CreateJsonContent(new { version = 2 })
         };
@@ -86,8 +86,8 @@ public class ContentApiTests
         using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
-        await client.PutAsync($"/v1/{factory.TestTenant}/article", CreateJsonContent(new { title = "one" }));
-        var headRequest = new HttpRequestMessage(HttpMethod.Head, $"/v1/{factory.TestTenant}/article");
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/article", CreateJsonContent(new { title = "one" }));
+        var headRequest = new HttpRequestMessage(HttpMethod.Head, $"/api/v1/{factory.TestTenant}/article");
         var head = await client.SendAsync(headRequest);
         var content = await head.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, head.StatusCode);
@@ -105,11 +105,11 @@ public class ContentApiTests
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
-        await client.PutAsync($"/v1/{factory.TestTenant}/home", CreateJsonContent(new { title = "home" }));
-        await client.PutAsync($"/v1/{factory.TestTenant}/help", CreateJsonContent(new { title = "help" }));
-        await client.PutAsync($"/v1/{factory.TestTenant}/blog", CreateJsonContent(new { title = "blog" }));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/home", CreateJsonContent(new { title = "home" }));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/help", CreateJsonContent(new { title = "help" }));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/blog", CreateJsonContent(new { title = "blog" }));
 
-        var listResponse = await client.GetAsync($"/v1/{factory.TestTenant}?prefix=he");
+        var listResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}?prefix=he");
         Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
         var listJson = await listResponse.Content.ReadFromJsonAsync<JsonElement>();
         var items = listJson.GetProperty("items").EnumerateArray().ToArray();
@@ -125,15 +125,15 @@ public class ContentApiTests
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
-        await client.PutAsync($"/v1/{factory.TestTenant}/home", CreateJsonContent(new { title = "home" }));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/home", CreateJsonContent(new { title = "home" }));
 
-        var deleteResponse = await client.DeleteAsync($"/v1/{factory.TestTenant}/home");
+        var deleteResponse = await client.DeleteAsync($"/api/v1/{factory.TestTenant}/home");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
-        var getResponse = await client.GetAsync($"/v1/{factory.TestTenant}/home");
+        var getResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/home");
         Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
 
-        var includeDeleted = await client.GetAsync($"/v1/{factory.TestTenant}?includeDeleted=true");
+        var includeDeleted = await client.GetAsync($"/api/v1/{factory.TestTenant}?includeDeleted=true");
         Assert.Equal(HttpStatusCode.OK, includeDeleted.StatusCode);
         var payload = await includeDeleted.Content.ReadFromJsonAsync<JsonElement>();
         var deletedItems = payload.GetProperty("items").EnumerateArray().ToArray();
@@ -148,10 +148,10 @@ public class ContentApiTests
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
-        await client.PutAsync($"/v1/{factory.TestTenant}/page-versions", CreateJsonContent(new { version = 1 }));
-        await client.PutAsync($"/v1/{factory.TestTenant}/page-versions", CreateJsonContent(new { version = 2 }));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/page-versions", CreateJsonContent(new { version = 1 }));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/page-versions", CreateJsonContent(new { version = 2 }));
 
-        var versionsResponse = await client.GetAsync($"/v1/{factory.TestTenant}/page-versions/versions");
+        var versionsResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/page-versions/versions");
         Assert.Equal(HttpStatusCode.OK, versionsResponse.StatusCode);
 
         var versions = await versionsResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -160,7 +160,7 @@ public class ContentApiTests
         Assert.Equal(2, versionEntries[0].GetProperty("version").GetInt32());
         Assert.Equal(1, versionEntries[1].GetProperty("version").GetInt32());
 
-        var versionOne = await client.GetAsync($"/v1/{factory.TestTenant}/page-versions?version=1");
+        var versionOne = await client.GetAsync($"/api/v1/{factory.TestTenant}/page-versions?version=1");
         Assert.Equal(HttpStatusCode.OK, versionOne.StatusCode);
         var data = await versionOne.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(1, data.GetProperty("version").GetInt32());
@@ -174,11 +174,11 @@ public class ContentApiTests
         var client = factory.CreateAuthenticatedClient();
 
         var wrongContent = new StringContent("plain text", Encoding.UTF8, "text/plain");
-        var wrongResponse = await client.PutAsync($"/v1/{factory.TestTenant}/plain", wrongContent);
+        var wrongResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/plain", wrongContent);
         Assert.Equal(HttpStatusCode.BadRequest, wrongResponse.StatusCode);
 
         var empty = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        var emptyResponse = await client.PutAsync($"/v1/{factory.TestTenant}/plain", empty);
+        var emptyResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/plain", empty);
         Assert.Equal(HttpStatusCode.BadRequest, emptyResponse.StatusCode);
     }
 
@@ -189,7 +189,7 @@ public class ContentApiTests
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
         var invalidJson = CreateInvalidJsonContent();
-        var invalidResponse = await client.PutAsync($"/v1/{factory.TestTenant}/plain", invalidJson);
+        var invalidResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/plain", invalidJson);
         Assert.Equal(HttpStatusCode.BadRequest, invalidResponse.StatusCode);
     }
 

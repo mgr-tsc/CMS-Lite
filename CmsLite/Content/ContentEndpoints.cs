@@ -4,13 +4,14 @@ using CmsLite.Database.Repositories;
 using CmsLite.Helpers;
 using CmsLite.Helpers.RequestMappers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Routing;
 
 namespace CmsLite.Content;
 
 public static class ContentEndpoints
 {
 
-    public static void MapContentEndpoints(this WebApplication app)
+    public static void MapContentEndpoints(this IEndpointRouteBuilder app)
     {
         var contentGroup = app.MapGroup("/v1").WithTags("Content Management");
 

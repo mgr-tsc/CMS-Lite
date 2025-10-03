@@ -29,7 +29,7 @@ public class RateLimitingTests : IAsyncDisposable
             };
             var requestJson = JsonSerializer.Serialize(request);
 
-            tasks.Add(client.PostAsync("/auth/login", new StringContent(requestJson, Encoding.UTF8, "application/json")));
+            tasks.Add(client.PostAsync("/api/auth/login", new StringContent(requestJson, Encoding.UTF8, "application/json")));
         }
 
         var responses = await Task.WhenAll(tasks);
@@ -56,13 +56,13 @@ public class RateLimitingTests : IAsyncDisposable
         // Create some content first
         var content = new { title = "Test Content" };
         var contentJson = JsonSerializer.Serialize(content);
-        await client.PutAsync($"/v1/{factory.TestTenant}/test-content", new StringContent(contentJson, Encoding.UTF8, "application/json"));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/test-content", new StringContent(contentJson, Encoding.UTF8, "application/json"));
 
         // Make many requests to the content read endpoint
         var tasks = new List<Task<HttpResponseMessage>>();
         for (int i = 0; i < 15; i++) // Reduced for faster test execution
         {
-            tasks.Add(client.GetAsync($"/v1/{factory.TestTenant}/test-content"));
+            tasks.Add(client.GetAsync($"/api/v1/{factory.TestTenant}/test-content"));
         }
 
         var responses = await Task.WhenAll(tasks);
@@ -84,7 +84,7 @@ public class RateLimitingTests : IAsyncDisposable
         {
             var content = new { title = $"Test Content {i}" };
             var contentJson = JsonSerializer.Serialize(content);
-            tasks.Add(client.PutAsync($"/v1/{factory.TestTenant}/test-content-{i}", new StringContent(contentJson, Encoding.UTF8, "application/json")));
+            tasks.Add(client.PutAsync($"/api/v1/{factory.TestTenant}/test-content-{i}", new StringContent(contentJson, Encoding.UTF8, "application/json")));
         }
 
         var responses = await Task.WhenAll(tasks);
@@ -103,7 +103,7 @@ public class RateLimitingTests : IAsyncDisposable
         // Create content to delete
         var content = new { title = "Test Content for Bulk Delete" };
         var contentJson = JsonSerializer.Serialize(content);
-        await client.PutAsync($"/v1/{factory.TestTenant}/bulk-test", new StringContent(contentJson, Encoding.UTF8, "application/json"));
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/bulk-test", new StringContent(contentJson, Encoding.UTF8, "application/json"));
 
         // Make many bulk delete requests
         var tasks = new List<Task<HttpResponseMessage>>();
@@ -111,7 +111,7 @@ public class RateLimitingTests : IAsyncDisposable
         {
             var deleteRequest = new { Resources = new[] { "bulk-test" } };
             var deleteRequestJson = JsonSerializer.Serialize(deleteRequest);
-            var request = new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
             {
                 Content = new StringContent(deleteRequestJson, Encoding.UTF8, "application/json")
             };
@@ -137,7 +137,7 @@ public class RateLimitingTests : IAsyncDisposable
         {
             var request = new { Email = "test@test.com", Password = "wrongpassword" };
             var requestJson = JsonSerializer.Serialize(request);
-            var response = await client.PostAsync("/auth/login", new StringContent(requestJson, Encoding.UTF8, "application/json"));
+            var response = await client.PostAsync("/api/auth/login", new StringContent(requestJson, Encoding.UTF8, "application/json"));
 
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
