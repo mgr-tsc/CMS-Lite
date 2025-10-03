@@ -37,7 +37,7 @@ public class DirectoryApiTests
         };
         await directoryRepo.CreateDirectoryAsync(docsDir);
 
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -71,7 +71,7 @@ public class DirectoryApiTests
 
         var rootDir = await directoryRepo.GetOrCreateRootDirectoryAsync(CmsLiteTestFactoryAuth.TestTenantId);
 
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/{rootDir.Id}");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/{rootDir.Id}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -92,7 +92,7 @@ public class DirectoryApiTests
         var client = factory.CreateAuthenticatedClient();
 
         var nonExistentId = Guid.NewGuid().ToString();
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/{nonExistentId}");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/{nonExistentId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -114,7 +114,7 @@ public class DirectoryApiTests
             parentId = rootDir.Id
         };
 
-        var response = await client.PostAsJsonAsync($"/v1/{factory.TestTenant}/directories", createRequest);
+        var response = await client.PostAsJsonAsync($"/api/v1/{factory.TestTenant}/directories", createRequest);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -128,7 +128,7 @@ public class DirectoryApiTests
         // Verify location header
         var location = response.Headers.Location?.ToString();
         Assert.NotNull(location);
-        Assert.Contains($"/v1/{factory.TestTenant}/directories/", location);
+        Assert.Contains($"/api/v1/{factory.TestTenant}/directories/", location);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class DirectoryApiTests
             // No parentId - should create root-level directory
         };
 
-        var response = await client.PostAsJsonAsync($"/v1/{factory.TestTenant}/directories", createRequest);
+        var response = await client.PostAsJsonAsync($"/api/v1/{factory.TestTenant}/directories", createRequest);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -168,7 +168,7 @@ public class DirectoryApiTests
             parentId = "non-existent-parent-id"
         };
 
-        var response = await client.PostAsJsonAsync($"/v1/{factory.TestTenant}/directories", createRequest);
+        var response = await client.PostAsJsonAsync($"/api/v1/{factory.TestTenant}/directories", createRequest);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var errorContent = await response.Content.ReadAsStringAsync();
@@ -213,7 +213,7 @@ public class DirectoryApiTests
             parentId = lastDirectoryId
         };
 
-        var response = await client.PostAsJsonAsync($"/v1/{factory.TestTenant}/directories", createRequest);
+        var response = await client.PostAsJsonAsync($"/api/v1/{factory.TestTenant}/directories", createRequest);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var errorContent = await response.Content.ReadAsStringAsync();
@@ -236,12 +236,12 @@ public class DirectoryApiTests
         // Create content in root directory
         var contentPayload = new { title = "Test Content" };
         var contentRequest = JsonSerializer.Serialize(contentPayload);
-        var createContentResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-content",
+        var createContentResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-content",
             new StringContent(contentRequest, Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.Created, createContentResponse.StatusCode);
 
         // Get directory contents
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/{rootDir.Id}/contents");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/{rootDir.Id}/contents");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -287,14 +287,14 @@ public class DirectoryApiTests
         // Create content in root directory
         var rootContentPayload = new { title = "Root Content" };
         var rootContentRequest = JsonSerializer.Serialize(rootContentPayload);
-        var rootContentResponse = await client.PutAsync($"/v1/{factory.TestTenant}/root-content",
+        var rootContentResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/root-content",
             new StringContent(rootContentRequest, Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.Created, rootContentResponse.StatusCode);
 
         // Create content in Documents directory
         var docsContentPayload = new { title = "Doc Content" };
         var docsContentRequest = JsonSerializer.Serialize(docsContentPayload);
-        var docsRequest = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/doc-content")
+        var docsRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/doc-content")
         {
             Content = new StringContent(docsContentRequest, Encoding.UTF8, "application/json")
         };
@@ -303,7 +303,7 @@ public class DirectoryApiTests
         Assert.Equal(HttpStatusCode.Created, docsContentResponse.StatusCode);
 
         // Get directory tree and verify content counts
-        var treeResponse = await client.GetAsync($"/v1/{factory.TestTenant}/directories");
+        var treeResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories");
         Assert.Equal(HttpStatusCode.OK, treeResponse.StatusCode);
 
         var treeContent = await treeResponse.Content.ReadAsStringAsync();
@@ -322,7 +322,7 @@ public class DirectoryApiTests
         Assert.Equal(1, docsDirResponse.GetProperty("contentCount").GetInt32());
 
         // Also test specific directory endpoint for root
-        var rootDetailsResponse = await client.GetAsync($"/v1/{factory.TestTenant}/directories/{rootDir.Id}");
+        var rootDetailsResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/{rootDir.Id}");
         Assert.Equal(HttpStatusCode.OK, rootDetailsResponse.StatusCode);
 
         var rootDetailsContent = await rootDetailsResponse.Content.ReadAsStringAsync();
@@ -330,7 +330,7 @@ public class DirectoryApiTests
         Assert.Equal(1, rootDetailsResult.GetProperty("contentCount").GetInt32());
 
         // Also test specific directory endpoint for Documents
-        var docsDetailsResponse = await client.GetAsync($"/v1/{factory.TestTenant}/directories/{docsDir.Id}");
+        var docsDetailsResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/{docsDir.Id}");
         Assert.Equal(HttpStatusCode.OK, docsDetailsResponse.StatusCode);
 
         var docsDetailsContent = await docsDetailsResponse.Content.ReadAsStringAsync();
@@ -347,10 +347,10 @@ public class DirectoryApiTests
 
         // Test all endpoints require authentication
         var responses = await Task.WhenAll(
-            client.GetAsync($"/v1/{factory.TestTenant}/directories"),
-            client.GetAsync($"/v1/{factory.TestTenant}/directories/{Guid.NewGuid()}"),
-            client.PostAsJsonAsync($"/v1/{factory.TestTenant}/directories", new { name = "Test" }),
-            client.GetAsync($"/v1/{factory.TestTenant}/directories/{Guid.NewGuid()}/contents")
+            client.GetAsync($"/api/v1/{factory.TestTenant}/directories"),
+            client.GetAsync($"/api/v1/{factory.TestTenant}/directories/{Guid.NewGuid()}"),
+            client.PostAsJsonAsync($"/api/v1/{factory.TestTenant}/directories", new { name = "Test" }),
+            client.GetAsync($"/api/v1/{factory.TestTenant}/directories/{Guid.NewGuid()}/contents")
         );
 
         // All should return 401 Unauthorized
@@ -367,7 +367,7 @@ public class DirectoryApiTests
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
-        var response = await client.GetAsync("/v1/nonexistent-tenant/directories");
+        var response = await client.GetAsync("/api/v1/nonexistent-tenant/directories");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

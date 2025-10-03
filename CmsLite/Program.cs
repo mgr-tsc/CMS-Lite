@@ -215,8 +215,11 @@ else
 app.UseCmsLiteAuthentication();
 app.UseMiddleware<TenantValidationMiddleware>();
 app.UseRateLimiter();
-app.MapAuthenticationEndpoints();
-app.MapContentEndpoints();
-app.MapDirectoryEndpoints();
+
+var apiGroup = app.MapGroup("/api");
+apiGroup.MapAuthenticationEndpoints();
+apiGroup.MapContentEndpoints();
+apiGroup.MapDirectoryEndpoints();
+
 app.Run();
 public partial class Program { }

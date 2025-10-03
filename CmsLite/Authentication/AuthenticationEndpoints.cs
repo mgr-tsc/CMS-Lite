@@ -2,12 +2,13 @@ using System.Security.Claims;
 using CmsLite.Database;
 using CmsLite.Database.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Routing;
 
 namespace CmsLite.Authentication;
 
 public static class AuthenticationEndpoints
 {
-    public static void MapAuthenticationEndpoints(this WebApplication app)
+    public static void MapAuthenticationEndpoints(this IEndpointRouteBuilder app)
     {
         var authGroup = app.MapGroup("/auth").WithTags("Authentication");
         // POST /auth/login

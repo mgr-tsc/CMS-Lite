@@ -23,7 +23,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
 
         // Create content first
         var contentData = JsonSerializer.Serialize(new { message = "Test content for deletion" });
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-resource.json",
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-resource.json",
             new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
@@ -37,7 +37,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json")
         });
@@ -72,7 +72,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         foreach (var resource in resources)
         {
             var contentData = JsonSerializer.Serialize(new { name = resource, data = "test" });
-            var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/{resource}",
+            var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/{resource}",
                 new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
             Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
         }
@@ -87,7 +87,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json")
         });
@@ -138,13 +138,13 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
 
         // Create content in root directory
         var contentData1 = JsonSerializer.Serialize(new { location = "root" });
-        var putResponse1 = await client.PutAsync($"/v1/{factory.TestTenant}/root-file.json",
+        var putResponse1 = await client.PutAsync($"/api/v1/{factory.TestTenant}/root-file.json",
             new StringContent(contentData1, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse1.StatusCode == HttpStatusCode.OK || putResponse1.StatusCode == HttpStatusCode.Created);
 
         // Create content in subdirectory
         var contentData2 = JsonSerializer.Serialize(new { location = "subdirectory" });
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/sub-file.json")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/sub-file.json")
         {
             Content = new StringContent(contentData2, System.Text.Encoding.UTF8, "application/json")
         };
@@ -163,7 +163,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json")
         });
@@ -199,7 +199,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json")
         });
@@ -236,7 +236,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json")
         });
@@ -264,7 +264,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
 
         // Create and then delete a resource
         var contentData = JsonSerializer.Serialize(new { message = "To be deleted twice" });
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-deleted.json",
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-deleted.json",
             new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
@@ -277,7 +277,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse1 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse1 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson1, System.Text.Encoding.UTF8, "application/json")
         });
@@ -292,7 +292,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse2 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse2 = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson2, System.Text.Encoding.UTF8, "application/json")
         });
@@ -325,7 +325,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json")
         });
@@ -343,7 +343,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
 
         // Create content
         var contentData = JsonSerializer.Serialize(new { message = "Test for duplicates" });
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/duplicate-test.json",
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/duplicate-test.json",
             new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
@@ -357,7 +357,7 @@ public class BulkSoftDeleteApiTests : IAsyncDisposable
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/v1/{factory.TestTenant}/bulk-delete")
+        var deleteResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/{factory.TestTenant}/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, System.Text.Encoding.UTF8, "application/json")
         });

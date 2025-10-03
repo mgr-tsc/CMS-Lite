@@ -68,7 +68,7 @@ Password: abc
 ### API Authentication
 ```bash
 # Login
-curl -X POST http://localhost:8080/auth/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "admin@email.com", "password": "abc"}'
 
@@ -84,11 +84,11 @@ curl -X POST http://localhost:8080/auth/login \
 }
 
 # Use token for authenticated requests
-curl -X GET http://localhost:8080/v1/acme/config \
+curl -X GET http://localhost:8080/api/v1/acme/config \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Refresh token (with rotation)
-curl -X POST http://localhost:8080/auth/refresh \
+curl -X POST http://localhost:8080/api/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{"token": "YOUR_CURRENT_TOKEN"}'
 ```
@@ -98,35 +98,35 @@ curl -X POST http://localhost:8080/auth/refresh \
 ## 📡 API Endpoints
 
 ### 🔐 Authentication (Public)
-- **POST /auth/login** → User authentication with email/password
-- **POST /auth/logout** → Revoke current session
-- **GET /auth/me** → Get current user information
-- **POST /auth/refresh** → Refresh authentication token (with rotation)
+- **POST /api/auth/login** → User authentication with email/password
+- **POST /api/auth/logout** → Revoke current session
+- **GET /api/auth/me** → Get current user information
+- **POST /api/auth/refresh** → Refresh authentication token (with rotation)
 
 ### 👥 User & Tenant Management (Public)
-- **POST /create-tenant** → Create new tenant with owner user
+- **POST /api/create-tenant** → Create new tenant with owner user
 
 ### 👥 User & Tenant Management (Authenticated)
-- **POST /attach-user** → Attach user to existing tenant
+- **POST /api/attach-user** → Attach user to existing tenant
 
 ### 📁 Content Management (Authenticated)
-- **PUT /v1/{tenant}/{resource}** → Create/update JSON or XML content (auto-versioned)
+- **PUT /api/v1/{tenant}/{resource}** → Create/update JSON or XML content (auto-versioned)
   - *Required header*: `Content-Type: application/json`, `application/xml`, or `text/xml`
   - *Optional header*: `X-Directory-Id: {directoryId}` (if not provided, uses root directory)
-- **GET /v1/{tenant}/{resource}** → Retrieve content (latest or specific version)
-- **HEAD /v1/{tenant}/{resource}** → Get metadata without content body
-- **DELETE /v1/{tenant}/{resource}** → Soft delete single content resource
-- **DELETE /v1/{tenant}/bulk-delete** → **Bulk soft delete multiple content resources** (atomic transaction)
-- **GET /v1/{tenant}** → List tenant resources (with filtering/pagination)
-- **GET /v1/{tenant}/{resource}/versions** → List all versions of resource
-- **GET /v1/{tenant}/{resource}/details** → Get comprehensive resource details with version history and directory info
+- **GET /api/v1/{tenant}/{resource}** → Retrieve content (latest or specific version)
+- **HEAD /api/v1/{tenant}/{resource}** → Get metadata without content body
+- **DELETE /api/v1/{tenant}/{resource}** → Soft delete single content resource
+- **DELETE /api/v1/{tenant}/bulk-delete** → **Bulk soft delete multiple content resources** (atomic transaction)
+- **GET /api/v1/{tenant}** → List tenant resources (with filtering/pagination)
+- **GET /api/v1/{tenant}/{resource}/versions** → List all versions of resource
+- **GET /api/v1/{tenant}/{resource}/details** → Get comprehensive resource details with version history and directory info
 
 ### 📂 Directory Management (Authenticated)
-- **GET /v1/{tenant}/directories** → List directory tree for tenant
-- **GET /v1/{tenant}/directories/tree** → Get complete directory tree with all content items in single response
-- **POST /v1/{tenant}/directories** → Create new directory with optional parent
-- **GET /v1/{tenant}/directories/{id}** → Get directory details and metadata
-- **GET /v1/{tenant}/directories/{id}/contents** → Get content items in directory
+- **GET /api/v1/{tenant}/directories** → List directory tree for tenant
+- **GET /api/v1/{tenant}/directories/tree** → Get complete directory tree with all content items in single response
+- **POST /api/v1/{tenant}/directories** → Create new directory with optional parent
+- **GET /api/v1/{tenant}/directories/{id}** → Get directory details and metadata
+- **GET /api/v1/{tenant}/directories/{id}/contents** → Get content items in directory
 
 **Features:**
 - **Hierarchical Structure**: Support for up to 5 nesting levels (0-4)
@@ -195,9 +195,9 @@ All content endpoints require **Bearer token authentication** and enforce **tena
 
 #### 1. **Authentication Flow**
 
-**Login** (POST /auth/login):
+**Login** (POST /api/auth/login):
 ```bash
-POST http://localhost:8080/auth/login
+POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
@@ -222,17 +222,17 @@ Content-Type: application/json
 }
 ```
 
-**Get Current User** (GET /auth/me):
+**Get Current User** (GET /api/auth/me):
 ```bash
-GET http://localhost:8080/auth/me
+GET http://localhost:8080/api/auth/me
 Authorization: Bearer {your-jwt-token}
 ```
 
 #### 2. **Content Management with Directory Support**
 
-**Create Content in Root Directory** (PUT /v1/{tenant}/{resource}):
+**Create Content in Root Directory** (PUT /api/v1/{tenant}/{resource}):
 ```bash
-PUT http://localhost:8080/v1/acme/config
+PUT http://localhost:8080/api/v1/acme/config
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 
@@ -256,9 +256,9 @@ Content-Type: application/json
 }
 ```
 
-**Create Content in Specific Directory** (PUT /v1/{tenant}/{resource}):
+**Create Content in Specific Directory** (PUT /api/v1/{tenant}/{resource}):
 ```bash
-PUT http://localhost:8080/v1/acme/homepage
+PUT http://localhost:8080/api/v1/acme/homepage
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 X-Directory-Id: {directory-id-from-your-setup}
@@ -270,9 +270,9 @@ X-Directory-Id: {directory-id-from-your-setup}
 }
 ```
 
-**Create XML Content** (PUT /v1/{tenant}/{resource}):
+**Create XML Content** (PUT /api/v1/{tenant}/{resource}):
 ```bash
-PUT http://localhost:8080/v1/acme/settings.xml
+PUT http://localhost:8080/api/v1/acme/settings.xml
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/xml
 
@@ -300,29 +300,29 @@ Content-Type: application/xml
 }
 ```
 
-**Retrieve Content** (GET /v1/{tenant}/{resource}):
+**Retrieve Content** (GET /api/v1/{tenant}/{resource}):
 ```bash
-GET http://localhost:8080/v1/acme/config
+GET http://localhost:8080/api/v1/acme/config
 Authorization: Bearer {your-jwt-token}
 
 # Response includes content + ETag header
 ```
 
-**Get Content Metadata** (HEAD /v1/{tenant}/{resource}):
+**Get Content Metadata** (HEAD /api/v1/{tenant}/{resource}):
 ```bash
-HEAD http://localhost:8080/v1/acme/config
+HEAD http://localhost:8080/api/v1/acme/config
 Authorization: Bearer {your-jwt-token}
 
 # Response: Headers only (ETag, Content-Length, Content-Type)
 ```
 
-**List Tenant Resources** (GET /v1/{tenant}):
+**List Tenant Resources** (GET /api/v1/{tenant}):
 ```bash
-GET http://localhost:8080/v1/acme
+GET http://localhost:8080/api/v1/acme
 Authorization: Bearer {your-jwt-token}
 
 # With filtering:
-GET http://localhost:8080/v1/acme?prefix=home&limit=10
+GET http://localhost:8080/api/v1/acme?prefix=home&limit=10
 
 # Response:
 {
@@ -342,9 +342,9 @@ GET http://localhost:8080/v1/acme?prefix=home&limit=10
 }
 ```
 
-**Update Content with Optimistic Concurrency** (PUT /v1/{tenant}/{resource}):
+**Update Content with Optimistic Concurrency** (PUT /api/v1/{tenant}/{resource}):
 ```bash
-PUT http://localhost:8080/v1/acme/config
+PUT http://localhost:8080/api/v1/acme/config
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 If-Match: {etag-from-previous-response}
@@ -355,9 +355,9 @@ If-Match: {etag-from-previous-response}
 }
 ```
 
-**Get Content Versions** (GET /v1/{tenant}/{resource}/versions):
+**Get Content Versions** (GET /api/v1/{tenant}/{resource}/versions):
 ```bash
-GET http://localhost:8080/v1/acme/config/versions
+GET http://localhost:8080/api/v1/acme/config/versions
 Authorization: Bearer {your-jwt-token}
 
 # Response:
@@ -379,23 +379,23 @@ Authorization: Bearer {your-jwt-token}
 ]
 ```
 
-**Get Specific Version** (GET /v1/{tenant}/{resource}?version={version}):
+**Get Specific Version** (GET /api/v1/{tenant}/{resource}?version={version}):
 ```bash
-GET http://localhost:8080/v1/acme/config?version=1
+GET http://localhost:8080/api/v1/acme/config?version=1
 Authorization: Bearer {your-jwt-token}
 ```
 
-**Soft Delete Single Content** (DELETE /v1/{tenant}/{resource}):
+**Soft Delete Single Content** (DELETE /api/v1/{tenant}/{resource}):
 ```bash
-DELETE http://localhost:8080/v1/acme/config
+DELETE http://localhost:8080/api/v1/acme/config
 Authorization: Bearer {your-jwt-token}
 
 # Response: 204 No Content
 ```
 
-**Bulk Soft Delete Content** (DELETE /v1/{tenant}/bulk-delete):
+**Bulk Soft Delete Content** (DELETE /api/v1/{tenant}/bulk-delete):
 ```bash
-DELETE http://localhost:8080/v1/acme/bulk-delete
+DELETE http://localhost:8080/api/v1/acme/bulk-delete
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 
@@ -447,9 +447,9 @@ Content-Type: application/json
 
 #### 3. **Directory Management Examples**
 
-**List Directory Tree** (GET /v1/{tenant}/directories):
+**List Directory Tree** (GET /api/v1/{tenant}/directories):
 ```bash
-GET http://localhost:8080/v1/acme/directories
+GET http://localhost:8080/api/v1/acme/directories
 Authorization: Bearer {your-jwt-token}
 
 # Response:
@@ -478,9 +478,9 @@ Authorization: Bearer {your-jwt-token}
 }
 ```
 
-**Create New Directory** (POST /v1/{tenant}/directories):
+**Create New Directory** (POST /api/v1/{tenant}/directories):
 ```bash
-POST http://localhost:8080/v1/acme/directories
+POST http://localhost:8080/api/v1/acme/directories
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 
@@ -500,9 +500,9 @@ Content-Type: application/json
 }
 ```
 
-**Get Directory Details** (GET /v1/{tenant}/directories/{id}):
+**Get Directory Details** (GET /api/v1/{tenant}/directories/{id}):
 ```bash
-GET http://localhost:8080/v1/acme/directories/docs-dir-id
+GET http://localhost:8080/api/v1/acme/directories/docs-dir-id
 Authorization: Bearer {your-jwt-token}
 
 # Response:
@@ -521,9 +521,9 @@ Authorization: Bearer {your-jwt-token}
 ```
 
 
-**Get Directory Contents** (GET /v1/{tenant}/directories/{id}/contents):
+**Get Directory Contents** (GET /api/v1/{tenant}/directories/{id}/contents):
 ```bash
-GET http://localhost:8080/v1/acme/directories/docs-dir-id/contents
+GET http://localhost:8080/api/v1/acme/directories/docs-dir-id/contents
 Authorization: Bearer {your-jwt-token}
 
 # Response:
@@ -552,9 +552,9 @@ Authorization: Bearer {your-jwt-token}
 }
 ```
 
-**Get Complete Directory Tree** (GET /v1/{tenant}/directories/tree):
+**Get Complete Directory Tree** (GET /api/v1/{tenant}/directories/tree):
 ```bash
-GET http://localhost:8080/v1/acme/directories/tree
+GET http://localhost:8080/api/v1/acme/directories/tree
 Authorization: Bearer {your-jwt-token}
 
 # Response:
@@ -595,9 +595,9 @@ Authorization: Bearer {your-jwt-token}
 }
 ```
 
-**Get Content Details** (GET /v1/{tenant}/{resource}/details):
+**Get Content Details** (GET /api/v1/{tenant}/{resource}/details):
 ```bash
-GET http://localhost:8080/v1/acme/config/details
+GET http://localhost:8080/api/v1/acme/config/details
 Authorization: Bearer {your-jwt-token}
 
 # Response:
@@ -647,7 +647,7 @@ Authorization: Bearer {your-jwt-token}
 
 **Test Invalid Directory ID**:
 ```bash
-PUT http://localhost:8080/v1/acme/test-content
+PUT http://localhost:8080/api/v1/acme/test-content
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 X-Directory-Id: invalid-directory-id
@@ -662,7 +662,7 @@ X-Directory-Id: invalid-directory-id
 
 **Test Cross-Tenant Directory Access**:
 ```bash
-PUT http://localhost:8080/v1/acme/test-content
+PUT http://localhost:8080/api/v1/acme/test-content
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 X-Directory-Id: {directory-id-from-different-tenant}
@@ -679,7 +679,7 @@ X-Directory-Id: {directory-id-from-different-tenant}
 **Test Directory Nesting Limit**:
 ```bash
 # After creating 5 levels (0,1,2,3,4), attempt to create 6th level
-POST http://localhost:8080/v1/acme/directories
+POST http://localhost:8080/api/v1/acme/directories
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 
@@ -696,7 +696,7 @@ Content-Type: application/json
 
 **Unauthorized Request**:
 ```bash
-GET http://localhost:8080/v1/acme/config
+GET http://localhost:8080/api/v1/acme/config
 # No Authorization header
 
 # Expected: 401 Unauthorized
@@ -704,7 +704,7 @@ GET http://localhost:8080/v1/acme/config
 
 **Invalid Tenant**:
 ```bash
-GET http://localhost:8080/v1/nonexistent-tenant/config
+GET http://localhost:8080/api/v1/nonexistent-tenant/config
 Authorization: Bearer {your-jwt-token}
 
 # Expected: 400 Bad Request
@@ -713,7 +713,7 @@ Authorization: Bearer {your-jwt-token}
 
 **Optimistic Concurrency Conflict**:
 ```bash
-PUT http://localhost:8080/v1/acme/config
+PUT http://localhost:8080/api/v1/acme/config
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 If-Match: wrong-etag
@@ -729,7 +729,7 @@ If-Match: wrong-etag
 
 **Cross-Directory Bulk Delete** (Resources in different directories):
 ```bash
-DELETE http://localhost:8080/v1/acme/bulk-delete
+DELETE http://localhost:8080/api/v1/acme/bulk-delete
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 
@@ -747,7 +747,7 @@ Content-Type: application/json
 
 **Non-existent Resources**:
 ```bash
-DELETE http://localhost:8080/v1/acme/bulk-delete
+DELETE http://localhost:8080/api/v1/acme/bulk-delete
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 
@@ -766,7 +766,7 @@ Content-Type: application/json
 
 **Empty Resources List**:
 ```bash
-DELETE http://localhost:8080/v1/acme/bulk-delete
+DELETE http://localhost:8080/api/v1/acme/bulk-delete
 Authorization: Bearer {your-jwt-token}
 Content-Type: application/json
 
@@ -784,18 +784,18 @@ Content-Type: application/json
 
 #### 6. **Logout & Token Management**
 
-**Logout** (POST /auth/logout):
+**Logout** (POST /api/auth/logout):
 ```bash
-POST http://localhost:8080/auth/logout
+POST http://localhost:8080/api/auth/logout
 Authorization: Bearer {your-jwt-token}
 
 # Response: 200 OK
 # Token is now invalidated
 ```
 
-**Refresh Token** (POST /auth/refresh):
+**Refresh Token** (POST /api/auth/refresh):
 ```bash
-POST http://localhost:8080/auth/refresh
+POST http://localhost:8080/api/auth/refresh
 Content-Type: application/json
 
 {
@@ -1036,11 +1036,11 @@ CMS-Lite includes built-in rate limiting to protect against abuse and ensure fai
 
 | Policy | Endpoints | Production Limit | Development Limit | Window | Purpose |
 |--------|-----------|------------------|-------------------|--------|---------|
-| **auth** | `/auth/*` | 10 req/min | 50 req/min | 1 minute | Login, logout, token refresh |
-| **content-read** | `GET /v1/{tenant}/*` | 100 req/min | 500 req/min | 1 minute | Content retrieval operations |
-| **content-write** | `PUT /v1/{tenant}/*` | 50 req/min | 200 req/min | 1 minute | Content creation/updates |
-| **bulk-operations** | `DELETE /v1/{tenant}/bulk-*` | 10 req/min | 50 req/min | 1 minute | Bulk delete operations |
-| **admin** | `/create-tenant`, `/attach-user` | 20 req/min | 50 req/min | 1 minute | Administrative operations |
+| **auth** | `/api/auth/*` | 10 req/min | 50 req/min | 1 minute | Login, logout, token refresh |
+| **content-read** | `GET /api/v1/{tenant}/*` | 100 req/min | 500 req/min | 1 minute | Content retrieval operations |
+| **content-write** | `PUT /api/v1/{tenant}/*` | 50 req/min | 200 req/min | 1 minute | Content creation/updates |
+| **bulk-operations** | `DELETE /api/v1/{tenant}/bulk-*` | 10 req/min | 50 req/min | 1 minute | Bulk delete operations |
+| **admin** | `/api/create-tenant`, `/api/attach-user` | 20 req/min | 50 req/min | 1 minute | Administrative operations |
 
 ### Rate Limiting Features
 
@@ -1173,7 +1173,7 @@ CMS-Lite includes comprehensive API documentation via Swagger UI with full JWT a
 
 1. **Access Swagger UI** at `/swagger` in development mode
 2. **Authenticate via API**:
-   - Use the `/auth/login` endpoint with demo credentials (`admin@email.com` / `abc`)
+   - Use the `/api/auth/login` endpoint with demo credentials (`admin@email.com` / `abc`)
    - Copy the JWT token from the response
 3. **Authorize in Swagger**:
    - Click the "Authorize" button in Swagger UI
@@ -1181,7 +1181,7 @@ CMS-Lite includes comprehensive API documentation via Swagger UI with full JWT a
    - Click "Authorize"
 4. **Test Protected Endpoints**:
    - All authenticated endpoints will now include the JWT token automatically
-   - Try endpoints like `/v1/{tenant}/directories` or `/v1/{tenant}/{resource}`
+   - Try endpoints like `/api/v1/{tenant}/directories` or `/api/v1/{tenant}/{resource}`
 
 ### Swagger Features
 

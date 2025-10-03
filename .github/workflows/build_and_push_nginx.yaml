@@ -1,4 +1,4 @@
-name: Build and Push Web Client
+name: Build and Push Nginx
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
 
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}-web
+      IMAGE_NAME: ${{ github.repository }}-nginx
 
     steps:
       - name: Checkout code
@@ -60,24 +60,24 @@ jobs:
         id: buildx-cache
         uses: actions/cache@v4
         with:
-          path: /tmp/.buildx-cache-web
-          key: ${{ runner.os }}-buildx-web-${{ github.sha }}
+          path: /tmp/.buildx-cache-nginx
+          key: ${{ runner.os }}-buildx-nginx-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-web-
+            ${{ runner.os }}-buildx-nginx-
 
       - name: Build and (optionally) push
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./docker/Dockerfile.web
+          context: ./docker
+          file: ./docker/Dockerfile.nginx
           push: ${{ github.event_name != 'workflow_dispatch' || inputs.push != 'false' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache-web
-          cache-to: type=local,dest=/tmp/.buildx-cache-web-new,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache-nginx
+          cache-to: type=local,dest=/tmp/.buildx-cache-nginx-new,mode=max
 
       - name: Move build cache
         if: always()
         run: |
-          rm -rf /tmp/.buildx-cache-web
-          mv /tmp/.buildx-cache-web-new /tmp/.buildx-cache-web
+          rm -rf /tmp/.buildx-cache-nginx
+          mv /tmp/.buildx-cache-nginx-new /tmp/.buildx-cache-nginx

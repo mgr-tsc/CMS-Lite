@@ -23,7 +23,7 @@ public class ContentApiDirectoryTests
         var payloadJson = JsonSerializer.Serialize(payload);
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-content", requestContent);
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-content", requestContent);
         Assert.Equal(HttpStatusCode.Created, putResponse.StatusCode);
 
         using var scope = factory.Services.CreateScope();
@@ -70,7 +70,7 @@ public class ContentApiDirectoryTests
         var payloadJson = JsonSerializer.Serialize(payload);
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/my-document")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/my-document")
         {
             Content = requestContent
         };
@@ -97,7 +97,7 @@ public class ContentApiDirectoryTests
         var payloadJson = JsonSerializer.Serialize(payload);
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/test-content")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/test-content")
         {
             Content = requestContent
         };
@@ -150,7 +150,7 @@ public class ContentApiDirectoryTests
         var payloadJson = JsonSerializer.Serialize(payload);
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/test-content")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/test-content")
         {
             Content = requestContent
         };
@@ -192,7 +192,7 @@ public class ContentApiDirectoryTests
         var payloadJson = JsonSerializer.Serialize(payload);
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/v1/{factory.TestTenant}/test-content")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/{factory.TestTenant}/test-content")
         {
             Content = requestContent
         };
@@ -216,7 +216,7 @@ public class ContentApiDirectoryTests
         var payloadJson = JsonSerializer.Serialize(payload);
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
-        var putResponse = await client.PutAsync("/v1/non-existent-tenant/test-content", requestContent);
+        var putResponse = await client.PutAsync("/api/v1/non-existent-tenant/test-content", requestContent);
         Assert.Equal(HttpStatusCode.NotFound, putResponse.StatusCode);
     }
 
@@ -235,7 +235,7 @@ public class ContentApiDirectoryTests
         var requestContent = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
         // First, create content successfully to verify blob exists
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-content", requestContent);
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-content", requestContent);
         Assert.Equal(HttpStatusCode.Created, putResponse.StatusCode);
 
         // Verify blob was created (using new blob key format)

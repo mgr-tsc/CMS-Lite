@@ -25,7 +25,7 @@ public class TenantIsolationTests : IAsyncDisposable
         var tenantAClient = factory.CreateAuthenticatedClient();
 
         // Try to access Tenant B's directories - should be forbidden
-        var response = await tenantAClient.GetAsync("/v1/tenant-b/directories/tree");
+        var response = await tenantAClient.GetAsync("/api/v1/tenant-b/directories/tree");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
@@ -42,7 +42,7 @@ public class TenantIsolationTests : IAsyncDisposable
         var tenantAClient = factory.CreateAuthenticatedClient();
 
         // Try to access Tenant B's content - should be forbidden
-        var response = await tenantAClient.GetAsync("/v1/tenant-b/some-resource");
+        var response = await tenantAClient.GetAsync("/api/v1/tenant-b/some-resource");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
@@ -60,7 +60,7 @@ public class TenantIsolationTests : IAsyncDisposable
 
         // Try to create content in Tenant B - should be forbidden
         var contentJson = JsonSerializer.Serialize(new { title = "Malicious Content" });
-        var response = await tenantAClient.PutAsync("/v1/tenant-b/malicious-resource",
+        var response = await tenantAClient.PutAsync("/api/v1/tenant-b/malicious-resource",
             new StringContent(contentJson, Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -78,7 +78,7 @@ public class TenantIsolationTests : IAsyncDisposable
         var tenantAClient = factory.CreateAuthenticatedClient();
 
         // Try to delete content in Tenant B - should be forbidden
-        var response = await tenantAClient.DeleteAsync("/v1/tenant-b/some-resource");
+        var response = await tenantAClient.DeleteAsync("/api/v1/tenant-b/some-resource");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
@@ -97,7 +97,7 @@ public class TenantIsolationTests : IAsyncDisposable
         // Try to bulk delete content in Tenant B - should be forbidden
         var deleteRequest = new { resources = new[] { "resource1", "resource2" } };
         var deleteRequestJson = JsonSerializer.Serialize(deleteRequest);
-        var request = new HttpRequestMessage(HttpMethod.Delete, "/v1/tenant-b/bulk-delete")
+        var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/tenant-b/bulk-delete")
         {
             Content = new StringContent(deleteRequestJson, Encoding.UTF8, "application/json")
         };
@@ -118,7 +118,7 @@ public class TenantIsolationTests : IAsyncDisposable
         var tenantAClient = factory.CreateAuthenticatedClient();
 
         // User should be able to access their own tenant's directories
-        var response = await tenantAClient.GetAsync("/v1/acme/directories/tree");
+        var response = await tenantAClient.GetAsync("/api/v1/acme/directories/tree");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -139,7 +139,7 @@ public class TenantIsolationTests : IAsyncDisposable
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tenantBToken);
 
         // Try to access Tenant A's directories - should be forbidden
-        var response = await tenantBClient.GetAsync("/v1/acme/directories/tree");
+        var response = await tenantBClient.GetAsync("/api/v1/acme/directories/tree");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
@@ -155,7 +155,7 @@ public class TenantIsolationTests : IAsyncDisposable
         var client = factory.CreateAuthenticatedClient();
 
         // Try to access an endpoint with an invalid tenant format (missing resource)
-        var response = await client.GetAsync("/v1/invalid");
+        var response = await client.GetAsync("/api/v1/invalid");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -173,7 +173,7 @@ public class TenantIsolationTests : IAsyncDisposable
 
         // Unauthenticated requests should pass through the middleware
         // (will be handled by authentication middleware later)
-        var response = await client.GetAsync("/v1/acme/directories/tree");
+        var response = await client.GetAsync("/api/v1/acme/directories/tree");
 
         // Should return 401 Unauthorized (from authentication middleware), not 403 Forbidden
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -201,7 +201,7 @@ public class TenantIsolationTests : IAsyncDisposable
         var tenantAClient = factory.CreateAuthenticatedClient();
 
         // This should trigger a security log entry
-        var response = await tenantAClient.GetAsync("/v1/tenant-b/directories/tree");
+        var response = await tenantAClient.GetAsync("/api/v1/tenant-b/directories/tree");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 

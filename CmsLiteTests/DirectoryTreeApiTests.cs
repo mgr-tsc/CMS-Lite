@@ -33,7 +33,7 @@ public class DirectoryTreeApiTests : IAsyncDisposable
         var token = factory.GenerateTestJwtToken();
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/tree");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/tree");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -63,13 +63,13 @@ public class DirectoryTreeApiTests : IAsyncDisposable
 
         // Add some content items via API
         var contentData = JsonSerializer.Serialize(new { message = "Test content", data = new { value = 123 } });
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-resource",
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-resource",
             new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
 
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
         // Get the directory tree
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/tree");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/tree");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -101,7 +101,7 @@ public class DirectoryTreeApiTests : IAsyncDisposable
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
         // Get root directory ID first
-        var rootDirResponse = await client.GetAsync($"/v1/{factory.TestTenant}/directories");
+        var rootDirResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories");
         Assert.Equal(HttpStatusCode.OK, rootDirResponse.StatusCode);
 
         var rootDirContent = await rootDirResponse.Content.ReadAsStringAsync();
@@ -117,11 +117,11 @@ public class DirectoryTreeApiTests : IAsyncDisposable
         // Create a subdirectory
         var createDirRequest = new CreateDirectoryRequest("SubDir1", rootDirId);
 
-        var createResponse = await client.PostAsJsonAsync($"/v1/{factory.TestTenant}/directories", createDirRequest);
+        var createResponse = await client.PostAsJsonAsync($"/api/v1/{factory.TestTenant}/directories", createDirRequest);
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
         // Get the directory tree
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/tree");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/tree");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -151,7 +151,7 @@ public class DirectoryTreeApiTests : IAsyncDisposable
 
         // Don't create root directory - should return empty tree
 
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/tree");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/tree");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -178,7 +178,7 @@ public class DirectoryTreeApiTests : IAsyncDisposable
         var token = factory.GenerateTestJwtToken();
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
-        var response = await client.GetAsync("/v1/nonexistent-tenant/directories/tree");
+        var response = await client.GetAsync("/api/v1/nonexistent-tenant/directories/tree");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -189,7 +189,7 @@ public class DirectoryTreeApiTests : IAsyncDisposable
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/tree");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/tree");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -206,16 +206,16 @@ public class DirectoryTreeApiTests : IAsyncDisposable
 
         // Create content
         var contentData = JsonSerializer.Serialize(new { message = "Test content" });
-        var putResponse = await client.PutAsync($"/v1/{factory.TestTenant}/test-resource",
+        var putResponse = await client.PutAsync($"/api/v1/{factory.TestTenant}/test-resource",
             new StringContent(contentData, System.Text.Encoding.UTF8, "application/json"));
         Assert.True(putResponse.StatusCode == HttpStatusCode.OK || putResponse.StatusCode == HttpStatusCode.Created);
 
         // Delete the content
-        var deleteResponse = await client.DeleteAsync($"/v1/{factory.TestTenant}/test-resource");
+        var deleteResponse = await client.DeleteAsync($"/api/v1/{factory.TestTenant}/test-resource");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
         // Get the directory tree
-        var response = await client.GetAsync($"/v1/{factory.TestTenant}/directories/tree");
+        var response = await client.GetAsync($"/api/v1/{factory.TestTenant}/directories/tree");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
