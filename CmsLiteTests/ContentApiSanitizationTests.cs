@@ -26,7 +26,7 @@ public class ContentApiSanitizationTests : IAsyncDisposable
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
         // Upload with spaces in name: "Clean Code.json"
-        var response = await client.PutAsync($"/v1/{factory.TestTenant}/Clean Code.json", content);
+        var response = await client.PutAsync($"/api/v1/{factory.TestTenant}/Clean Code.json", content);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -48,7 +48,7 @@ public class ContentApiSanitizationTests : IAsyncDisposable
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
         // Upload with special characters: "Annual Report (Q4) 2024!.json"
-        var response = await client.PutAsync($"/v1/{factory.TestTenant}/Annual Report (Q4) 2024!.json", content);
+        var response = await client.PutAsync($"/api/v1/{factory.TestTenant}/Annual Report (Q4) 2024!.json", content);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -69,10 +69,10 @@ public class ContentApiSanitizationTests : IAsyncDisposable
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
         // Upload with spaces
-        await client.PutAsync($"/v1/{factory.TestTenant}/My Document.json", content);
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/My Document.json", content);
 
         // Retrieve using sanitized name
-        var getResponse = await client.GetAsync($"/v1/{factory.TestTenant}/my-document.json");
+        var getResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}/my-document.json");
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
 
         var retrievedContent = await getResponse.Content.ReadAsStringAsync();
@@ -92,7 +92,7 @@ public class ContentApiSanitizationTests : IAsyncDisposable
 
         // Note: This will try to use a different tenant name which may not exist
         // The test verifies sanitization happens even if tenant doesn't exist
-        var response = await client.PutAsync("/v1/ACME Corp!/test.json", content);
+        var response = await client.PutAsync("/api/v1/ACME Corp!/test.json", content);
 
         // Will fail with 404 because tenant doesn't exist, but URL was sanitized
         Assert.True(response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest);
@@ -110,7 +110,7 @@ public class ContentApiSanitizationTests : IAsyncDisposable
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
         // Upload with uppercase extension
-        var response = await client.PutAsync($"/v1/{factory.TestTenant}/MyFile.JSON", content);
+        var response = await client.PutAsync($"/api/v1/{factory.TestTenant}/MyFile.JSON", content);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -131,7 +131,7 @@ public class ContentApiSanitizationTests : IAsyncDisposable
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
         // Upload with multiple consecutive spaces
-        var response = await client.PutAsync($"/v1/{factory.TestTenant}/My    Document    File.json", content);
+        var response = await client.PutAsync($"/api/v1/{factory.TestTenant}/My    Document    File.json", content);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -152,11 +152,11 @@ public class ContentApiSanitizationTests : IAsyncDisposable
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
         // Upload multiple files with spaces
-        await client.PutAsync($"/v1/{factory.TestTenant}/File One.json", content);
-        await client.PutAsync($"/v1/{factory.TestTenant}/File Two.json", content);
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/File One.json", content);
+        await client.PutAsync($"/api/v1/{factory.TestTenant}/File Two.json", content);
 
         // List resources
-        var listResponse = await client.GetAsync($"/v1/{factory.TestTenant}");
+        var listResponse = await client.GetAsync($"/api/v1/{factory.TestTenant}");
         Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
 
         var listContent = await listResponse.Content.ReadAsStringAsync();
