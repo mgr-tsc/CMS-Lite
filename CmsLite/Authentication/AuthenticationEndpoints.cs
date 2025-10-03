@@ -14,7 +14,8 @@ public static class AuthenticationEndpoints
         authGroup.MapPost("/login", async (
             LoginRequest request,
             ICmsLiteAuthenticationService authService,
-            IUserRepo userRepo) =>
+            IUserRepo userRepo,
+            CancellationToken cancellationToken) =>
         {
             try
             {
@@ -24,24 +25,24 @@ public static class AuthenticationEndpoints
                     return Results.BadRequest("Email and password are required");
                 }
                 // Attempt sign-in (validates credentials only, no session created yet)
-                var signInResult = await authService.SignInAsync(request.Email, request.Password);
+                var signInResult = await authService.SignInAsync(request.Email, request.Password, cancellationToken);
                 if (!signInResult.IsSuccess)
                 {
                     return Results.Unauthorized();
                 }
                 var user = signInResult.User!;
                 // Check if user already has an active session
-                var existingSession = await authService.GetActiveSessionAsync(user.Id);
+                var existingSession = await authService.GetActiveSessionAsync(user.Id, cancellationToken);
                 DbSet.UserSession session;
                 if (existingSession != null)
                 {
                     // User is already signed in, refresh the existing session
-                    session = await authService.RefreshExistingSessionAsync(existingSession);
+                    session = await authService.RefreshExistingSessionAsync(existingSession, cancellationToken);
                 }
                 else
                 {
                     // Create new session
-                    session = await authService.CreateUserSessionAsync(user);
+                    session = await authService.CreateUserSessionAsync(user, cancellationToken);
                 }
                 var response = new LoginResponse
                 {
@@ -76,7 +77,8 @@ public static class AuthenticationEndpoints
         // POST /auth/logout
         authGroup.MapPost("/logout", async (
             HttpContext context,
-            ICmsLiteAuthenticationService authService) =>
+            ICmsLiteAuthenticationService authService,
+            CancellationToken cancellationToken) =>
         {
             try
             {
@@ -85,7 +87,7 @@ public static class AuthenticationEndpoints
 
                 if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(sessionId))
                 {
-                    await authService.SignOutAsync(userId, sessionId);
+                    await authService.SignOutAsync(userId, sessionId, cancellationToken);
                 }
 
                 return Results.Ok(new LogoutResponse());
@@ -105,7 +107,8 @@ public static class AuthenticationEndpoints
         // GET /auth/me
         authGroup.MapGet("/me", async (
             HttpContext context,
-            IUserRepo userRepo) =>
+            IUserRepo userRepo,
+            CancellationToken cancellationToken) =>
         {
             try
             {
@@ -115,7 +118,7 @@ public static class AuthenticationEndpoints
                     return Results.Unauthorized();
                 }
 
-                var user = await userRepo.GetUserByIdAsync(userId);
+                var user = await userRepo.GetUserByIdAsync(userId, cancellationToken);
                 if (user == null)
                 {
                     return Results.Unauthorized();
@@ -150,7 +153,8 @@ public static class AuthenticationEndpoints
         // POST /auth/refresh
         authGroup.MapPost("/refresh", async (
             RefreshTokenRequest request,
-            ICmsLiteAuthenticationService authService) =>
+            ICmsLiteAuthenticationService authService,
+            CancellationToken cancellationToken) =>
         {
             try
             {
@@ -159,7 +163,7 @@ public static class AuthenticationEndpoints
                     return Results.BadRequest("Token is required");
                 }
 
-                var refreshResult = await authService.RefreshTokenAsync(request.Token);
+                var refreshResult = await authService.RefreshTokenAsync(request.Token, cancellationToken);
                 if (refreshResult == null)
                 {
                     return Results.Unauthorized();

@@ -12,9 +12,9 @@ public class UserRepo : IUserRepo
         this.dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    public async Task<DbSet.User?> GetUserByIdAsync(string userId)
+    public async Task<DbSet.User?> GetUserByIdAsync(string userId, CancellationToken cancellationToken = default)
     {
-        return await dbContext.UsersTable.Include(u => u.Tenant).FirstOrDefaultAsync(u => u.Id == userId);
+        return await dbContext.UsersTable.Include(u => u.Tenant).FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
     }
 
     public async Task<DbSet.User?> GetUserByEmailAsync(string email)
