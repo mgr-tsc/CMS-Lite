@@ -1,0 +1,19 @@
+FROM nginx:alpine
+
+# Install OpenSSL for certificate generation
+RUN apk add --no-cache openssl
+
+# Generate self-signed SSL certificate
+RUN mkdir -p /etc/nginx/ssl && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/nginx/ssl/nginx-selfsigned.key \
+    -out /etc/nginx/ssl/nginx-selfsigned.crt \
+    -subj "/C=US/ST=State/L=City/O=CMS-Lite/OU=Dev/CN=localhost" && \
+    openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048
+
+# Copy nginx configuration for ACI (uses 127.0.0.1 instead of container names)
+COPY ./nginx_aci.conf /etc/nginx/nginx.conf
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]
