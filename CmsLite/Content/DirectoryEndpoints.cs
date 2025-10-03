@@ -17,7 +17,8 @@ public static class DirectoryEndpoints
             string tenant,
             CmsLiteDbContext db,
             IDirectoryRepo directoryRepo,
-            ITenantRepo tenantRepo) =>
+            ITenantRepo tenantRepo,
+            CancellationToken cancellationToken) =>
         {
             // Get tenant ID and validate
             var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
@@ -52,7 +53,8 @@ public static class DirectoryEndpoints
         directoryGroup.MapGet("", async (
             string tenant,
             CmsLiteDbContext db,
-            IDirectoryRepo directoryRepo) =>
+            IDirectoryRepo directoryRepo,
+            CancellationToken cancellationToken) =>
         {
             // Get tenant ID
             var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
@@ -85,7 +87,8 @@ public static class DirectoryEndpoints
             string tenant,
             string id,
             CmsLiteDbContext db,
-            IDirectoryRepo directoryRepo) =>
+            IDirectoryRepo directoryRepo,
+            CancellationToken cancellationToken) =>
         {
             // Get tenant ID
             var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
@@ -131,7 +134,8 @@ public static class DirectoryEndpoints
             string tenant,
             CreateDirectoryRequest request,
             CmsLiteDbContext db,
-            IDirectoryRepo directoryRepo) =>
+            IDirectoryRepo directoryRepo,
+            CancellationToken cancellationToken) =>
         {
             // Get tenant ID
             var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
@@ -203,7 +207,8 @@ public static class DirectoryEndpoints
             int? limit,
             string? cursor,
             CmsLiteDbContext db,
-            IDirectoryRepo directoryRepo) =>
+            IDirectoryRepo directoryRepo,
+            CancellationToken cancellationToken) =>
         {
             // Get tenant ID
             var (tenantSuccess, tenantId, tenantError) = await DbHelper.GetTenantIdAsync(tenant, db);
@@ -233,7 +238,7 @@ public static class DirectoryEndpoints
                 .OrderBy(ci => ci.Id)
                 .Take(take + 1);
 
-            var contentItems = await contentQuery.ToListAsync();
+            var contentItems = await contentQuery.ToListAsync(cancellationToken);
 
             string? nextCursor = contentItems.Count > take ? contentItems[^1].Id.ToString() : null;
             if (contentItems.Count > take) contentItems.RemoveAt(contentItems.Count - 1);
