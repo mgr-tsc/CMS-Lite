@@ -9,6 +9,7 @@ import {
   makeStyles,
   tokens,
   Checkbox,
+  mergeClasses,
 } from '@fluentui/react-components';
 import { DocumentRegular, FolderRegular } from '@fluentui/react-icons'
 import { BREAKPOINTS } from './layoutConstants'
@@ -54,9 +55,10 @@ const useStyles = makeStyles({
     },
   },
   selectedRow: {
-    backgroundColor: tokens.colorBrandBackgroundSelected,
+    backgroundColor: tokens.colorNeutralBackground4,
+    boxShadow: `inset 3px 0 0 ${tokens.colorBrandStroke1}`,
     '&:hover': {
-      backgroundColor: tokens.colorBrandBackgroundPressed,
+      backgroundColor: tokens.colorNeutralBackground5,
     },
   },
   fileIcon: {
@@ -145,7 +147,7 @@ export const FileListView = ({ directory, selectedFiles, onFileSelect }: FileLis
                 return (
                   <TableRow
                     key={file.id}
-                    className={`${styles.tableRow} ${isSelected ? styles.selectedRow : ''}`}
+                    className={mergeClasses(styles.tableRow, isSelected ? styles.selectedRow : undefined)}
                     onClick={() => handleRowClick(file.id)}
                   >
                     <TableCell>

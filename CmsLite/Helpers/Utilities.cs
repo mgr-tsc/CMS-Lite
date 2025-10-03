@@ -10,18 +10,76 @@ public enum FileSizeUnit
 public enum SupportedContentType
 {
     Json,
-    Xml
+    Xml,
+    Pdf
 }
 
 public class Utilities
 {
+    /// <summary>
+    /// Sanitizes a resource name by normalizing it to a safe, URL-friendly format.
+    /// Rules:
+    /// - Converts to lowercase
+    /// - Replaces spaces with hyphens
+    /// - Removes invalid characters (keeps only: ASCII a-z, 0-9, hyphen, underscore, period)
+    /// - Removes consecutive hyphens
+    /// - Trims leading/trailing hyphens (but preserves periods for file extensions)
+    /// </summary>
+    /// <param name="resourceName">The resource name to sanitize</param>
+    /// <returns>Sanitized resource name</returns>
+    public static string SanitizeResourceName(string resourceName)
+    {
+        if (string.IsNullOrWhiteSpace(resourceName))
+            return resourceName;
+
+        // Convert to lowercase
+        var sanitized = resourceName.ToLowerInvariant();
+
+        // Replace spaces with hyphens
+        sanitized = sanitized.Replace(' ', '-');
+
+        // Remove invalid characters (keep only: ASCII a-z, 0-9, hyphen, underscore, period)
+        var validChars = new System.Text.StringBuilder();
+        foreach (var c in sanitized)
+        {
+            // Only allow ASCII alphanumeric and safe punctuation
+            if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.')
+            {
+                validChars.Append(c);
+            }
+        }
+        sanitized = validChars.ToString();
+
+        // Replace consecutive hyphens with single hyphen
+        while (sanitized.Contains("--"))
+        {
+            sanitized = sanitized.Replace("--", "-");
+        }
+
+        // Trim leading/trailing hyphens (but not periods, to preserve file extensions)
+        sanitized = sanitized.Trim('-');
+
+        return sanitized;
+    }
+
     public static (string tenant, string resource) ParseTenantResource(string tenant, string resource)
     {
         if (string.IsNullOrWhiteSpace(tenant) || string.IsNullOrWhiteSpace(resource))
             throw new ArgumentException("Tenant and resource are required.");
+
+        // Check for slashes BEFORE sanitization (so we can give clear error messages)
         if (tenant.Contains('/') || resource.Contains('/'))
             throw new ArgumentException("Tenant/resource cannot contain '/'.");
-        return (tenant.Trim(), resource.Trim());
+
+        // Sanitize both tenant and resource names
+        tenant = SanitizeResourceName(tenant.Trim());
+        resource = SanitizeResourceName(resource.Trim());
+
+        // After sanitization, check if they're still valid
+        if (string.IsNullOrWhiteSpace(tenant) || string.IsNullOrWhiteSpace(resource))
+            throw new ArgumentException("Tenant and resource names must contain valid characters.");
+
+        return (tenant, resource);
     }
 
     public static string HashPassword(string password)
@@ -65,6 +123,22 @@ public class Utilities
         {
             return false;
         }
+    }
+
+    public static bool IsValidPdf(byte[] data)
+    {
+        // PDF files must start with the PDF magic bytes: %PDF- (0x25 0x50 0x44 0x46 0x2D)
+        if (data == null || data.Length < 5)
+        {
+            return false;
+        }
+
+        // Check for PDF signature at the start
+        return data[0] == 0x25 && // %
+               data[1] == 0x50 && // P
+               data[2] == 0x44 && // D
+               data[3] == 0x46 && // F
+               data[4] == 0x2D;   // -
     }
 
     public static bool IsValidJsonWithComments(byte[] data)
@@ -118,7 +192,8 @@ public class Utilities
             "application/json" => SupportedContentType.Json,
             "application/xml" => SupportedContentType.Xml,
             "text/xml" => SupportedContentType.Xml,
-            _ => throw new ArgumentException($"Unsupported content type '{mediaType}'. Only 'application/json', 'application/xml', and 'text/xml' are supported.")
+            "application/pdf" => SupportedContentType.Pdf,
+            _ => throw new ArgumentException($"Unsupported content type '{mediaType}'. Only 'application/json', 'application/xml', 'text/xml', and 'application/pdf' are supported.")
         };
     }
 

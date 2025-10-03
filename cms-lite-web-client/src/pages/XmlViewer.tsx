@@ -35,6 +35,8 @@ import {
 } from '@fluentui/react-components'
 import { ArrowLeftRegular, CheckmarkRegular, ArrowImportRegular } from '@fluentui/react-icons'
 import JsonView from '@uiw/react-json-view'
+import XMLReader from '@uiw/react-xml-reader'
+import { XMLBuilder, XMLParser } from 'fast-xml-parser'
 import { MainLayout } from '../layout'
 import type { ContentItemDetails } from '../types/content'
 import { useAuth } from '../contexts'
@@ -45,21 +47,40 @@ import {
   type DirectoryNode,
 } from '../store/slices/directoryTree'
 
-const SAMPLE_JSON = {
-  title: 'Content Item',
-  status: 'draft',
-  tags: ['news', 'release'],
-  metadata: {
-    author: 'CMS Lite',
-    createdAt: '2025-01-12T09:45:00.000Z',
-    lastEditedBy: 'editor@example.com',
-  },
-  body: {
-    blocks: [
-      { type: 'heading', level: 2, text: 'JSON Viewer Page' },
-      { type: 'paragraph', text: 'Paste JSON in the panel to inspect the structure.' },
-    ],
-  },
+const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<contentItem>
+  <title>XML Payload</title>
+  <status>draft</status>
+  <tags>
+    <tag>news</tag>
+    <tag>release</tag>
+  </tags>
+  <metadata>
+    <author>CMS Lite</author>
+    <createdAt>2025-01-12T09:45:00.000Z</createdAt>
+    <lastEditedBy>editor@example.com</lastEditedBy>
+  </metadata>
+  <body>
+    <section heading="XML Viewer Page">
+      <paragraph>Paste XML in the panel to inspect the structure.</paragraph>
+    </section>
+  </body>
+</contentItem>`
+
+const xmlParserOptions = {
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  textNodeName: '#text',
+  trimValues: false,
+} as const
+
+const xmlBuilderOptions = {
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  textNodeName: '#text',
+  suppressEmptyNode: true,
+  format: true,
+  indentBy: '  ',
 }
 
 const useStyles = makeStyles({
@@ -121,7 +142,7 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: tokens.colorNeutralBackground2,
-    minHeight: '320px',
+    //minHeight: '320px',
     overflow: 'hidden',
   },
   viewerContainer: {
@@ -173,21 +194,21 @@ const viewerTheme: Record<string, string> = {
   backgroundColor: tokens.colorNeutralBackground1,
 }
 
-type JsonViewerRouteState = {
+type XmlViewerRouteState = {
   resourceId?: string
   metadata?: ContentItemDetails | Record<string, unknown>
-  json?: Record<string, unknown> | Array<unknown>
-  rawJson?: string
+  xml?: string
+  rawXml?: string
   tenantName?: string
   contentType?: string
   fileExtension?: string
   version?: number
-  viewer?: 'json'
+  viewer?: 'xml'
 }
 
-type JsonLike = Record<string, unknown> | Array<unknown>
+type XmlDisplayValue = Record<string, unknown> | Array<unknown>
 
-type PayloadSource = 'provided-json' | 'raw-json' | 'metadata' | 'sample' | 'fetched'
+type PayloadSource = 'provided-xml' | 'raw-xml' | 'metadata' | 'sample' | 'fetched'
 
 type CmsResourceOption = {
   key: string
@@ -197,49 +218,89 @@ type CmsResourceOption = {
   contentType?: string
 }
 
-const jsonReplacer = (_key: string, value: unknown) =>
-  typeof value === 'bigint' ? value.toString() : value
-
-const safeStringify = (value: unknown): string => {
-  try {
-    return JSON.stringify(value, jsonReplacer, 2) ?? ''
-  } catch (error) {
-    console.warn('Failed to stringify value; falling back to string conversion.', error)
-    return String(value)
-  }
-}
-
-const ensureJsonLike = (value: unknown): JsonLike => {
+const ensureDisplayValue = (value: unknown): XmlDisplayValue => {
   if (Array.isArray(value)) {
     return value
   }
+
   if (value && typeof value === 'object') {
-    return value as JsonLike
+    return value as XmlDisplayValue
   }
+
   return { value }
 }
 
-const normalizePayload = (value: unknown): { parsed: JsonLike; formatted: string } => {
+const parserFromString = (value: string) => {
+  const parser = new XMLParser(xmlParserOptions)
+  return parser.parse(value)
+}
+
+const builderFromObject = (value: unknown) => {
+  const builder = new XMLBuilder(xmlBuilderOptions)
+  return builder.build(value)
+}
+
+const sanitizeXmlText = (value: string): string => {
+  const lines = value.split(/\r?\n/)
+  const sanitized: string[] = []
+  let previousBlank = false
+
+  lines.forEach((line) => {
+    const lineWithoutTrailing = line.replace(/\s+$/u, '')
+    const isBlank = lineWithoutTrailing.trim().length === 0
+    if (isBlank) {
+      if (!previousBlank && sanitized.length > 0) {
+        sanitized.push('')
+      }
+      previousBlank = true
+    } else {
+      sanitized.push(lineWithoutTrailing)
+      previousBlank = false
+    }
+  })
+
+  return sanitized.join('\n').trim()
+}
+
+const normalizeXmlPayload = (
+  value: unknown,
+  options?: { wrapRootName?: string },
+): { parsed: XmlDisplayValue; formatted: string } => {
   if (typeof value === 'string') {
     try {
-      const parsed = JSON.parse(value)
-      const jsonLike = ensureJsonLike(parsed)
-      return { parsed: jsonLike, formatted: safeStringify(jsonLike) }
-    } catch {
-      return { parsed: { value }, formatted: value }
+      const parsed = parserFromString(value)
+      const displayValue = ensureDisplayValue(parsed)
+      const formatted = sanitizeXmlText(builderFromObject(parsed))
+      return { parsed: displayValue, formatted }
+    } catch (error) {
+      console.warn('Failed to parse XML string; falling back to raw text.', error)
+      return { parsed: { value }, formatted: sanitizeXmlText(value) }
     }
   }
-  const jsonLike = ensureJsonLike(value)
-  return { parsed: jsonLike, formatted: safeStringify(jsonLike) }
+
+  if (value && typeof value === 'object') {
+    const displayValue = ensureDisplayValue(value)
+    try {
+      const formatted = builderFromObject(
+        options?.wrapRootName ? { [options.wrapRootName]: value } : value,
+      )
+      return { parsed: displayValue, formatted: sanitizeXmlText(formatted) }
+    } catch (error) {
+      console.warn('Failed to convert object to XML; falling back to string representation.', error)
+      return { parsed: displayValue, formatted: JSON.stringify(value, null, 2) }
+    }
+  }
+
+  return normalizeXmlPayload({ value })
 }
 
-const isJsonContentItem = (item: ContentItemNode): boolean => {
+const isXmlContentItem = (item: ContentItemNode): boolean => {
   const contentType = item.contentType?.toLowerCase() ?? ''
   const resource = item.resource.toLowerCase()
-  return contentType.includes('json') || resource.endsWith('.json')
+  return contentType.includes('xml') || resource.endsWith('.xml')
 }
 
-const flattenJsonContentItems = (root: DirectoryNode | null): CmsResourceOption[] => {
+const flattenXmlContentItems = (root: DirectoryNode | null): CmsResourceOption[] => {
   if (!root) {
     return []
   }
@@ -251,7 +312,7 @@ const flattenJsonContentItems = (root: DirectoryNode | null): CmsResourceOption[
     const pathPrefix = pathParts.join('/')
 
     node.contentItems.forEach((item) => {
-      if (!isJsonContentItem(item)) {
+      if (!isXmlContentItem(item)) {
         return
       }
 
@@ -272,68 +333,71 @@ const flattenJsonContentItems = (root: DirectoryNode | null): CmsResourceOption[
   return items.sort((a, b) => a.label.localeCompare(b.label))
 }
 
-const deriveInitialPayload = (state: JsonViewerRouteState | null) => {
-  if (state?.json) {
-    const normalized = normalizePayload(state.json)
-    return { ...normalized, source: 'provided-json' as PayloadSource }
+const deriveInitialPayload = (state: XmlViewerRouteState | null) => {
+  if (state?.xml) {
+    const normalized = normalizeXmlPayload(state.xml)
+    return { ...normalized, source: 'provided-xml' as PayloadSource }
   }
 
-  if (state?.rawJson) {
-    const normalized = normalizePayload(state.rawJson)
-    return { ...normalized, source: 'raw-json' as PayloadSource }
+  if (state?.rawXml) {
+    const normalized = normalizeXmlPayload(state.rawXml)
+    return { ...normalized, source: 'raw-xml' as PayloadSource }
   }
 
   if (state?.metadata) {
-    const normalized = normalizePayload(state.metadata)
+    const normalized = normalizeXmlPayload(state.metadata, { wrapRootName: 'metadata' })
     return { ...normalized, source: 'metadata' as PayloadSource }
   }
 
-  const normalized = normalizePayload(SAMPLE_JSON)
+  const normalized = normalizeXmlPayload(SAMPLE_XML)
   return { ...normalized, source: 'sample' as PayloadSource }
 }
 
-export const JsonViewer = () => {
+export const XmlViewer = () => {
   const styles = useStyles()
   const navigate = useNavigate()
   const location = useLocation()
-  const routeState = location.state as JsonViewerRouteState | null
+  const routeState = location.state as XmlViewerRouteState | null
   const sourceResourceId = routeState?.resourceId ?? null
   const { user } = useAuth()
   const directoryRoot = useSelector(selectDirectoryTreeRoot)
 
-  const cmsJsonOptions = useMemo(() => flattenJsonContentItems(directoryRoot), [directoryRoot])
+  const cmsXmlOptions = useMemo(() => flattenXmlContentItems(directoryRoot), [directoryRoot])
   const cmsOptionsByKey = useMemo(() => {
     const map = new Map<string, CmsResourceOption>()
-    cmsJsonOptions.forEach((option) => {
+    cmsXmlOptions.forEach((option) => {
       map.set(option.key, option)
     })
     return map
-  }, [cmsJsonOptions])
+  }, [cmsXmlOptions])
 
   const initialPayload = useMemo(() => deriveInitialPayload(routeState), [routeState])
 
   const [payloadSource, setPayloadSource] = useState<PayloadSource>(initialPayload.source)
   const [input, setInput] = useState(initialPayload.formatted)
-  const [parsedJson, setParsedJson] = useState<JsonLike>(initialPayload.parsed)
+  const [parsedXml, setParsedXml] = useState<XmlDisplayValue>(initialPayload.parsed)
   const [parseError, setParseError] = useState<string | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isFetching, setIsFetching] = useState(false)
   const [sourceDescription, setSourceDescription] = useState<string | null>(sourceResourceId)
+
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [selectedCmsOption, setSelectedCmsOption] = useState<CmsResourceOption | null>(null)
   const [cmsComboboxValue, setCmsComboboxValue] = useState('')
   const [isImportingCms, setIsImportingCms] = useState(false)
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const xmlReaderRef = useRef<HTMLInputElement | null>(null)
+
   const tenantName = routeState?.tenantName ?? user?.tenant?.name ?? null
   const version = routeState?.version
-  const viewer = routeState?.viewer ?? 'json'
+  const viewer = routeState?.viewer ?? 'xml'
 
   useEffect(() => {
     setPayloadSource(initialPayload.source)
     setInput(initialPayload.formatted)
-    setParsedJson(initialPayload.parsed)
+    setParsedXml(initialPayload.parsed)
     setParseError(null)
     setFetchError(null)
 
@@ -350,7 +414,7 @@ export const JsonViewer = () => {
       options?: { version?: number; label?: string },
     ): Promise<{ success: boolean; error?: string }> => {
       if (!tenantName) {
-        const message = 'Missing tenant context; cannot load JSON payload.'
+        const message = 'Missing tenant context; cannot load XML payload.'
         setFetchError(message)
         return { success: false, error: message }
       }
@@ -360,14 +424,16 @@ export const JsonViewer = () => {
 
       try {
         const params = options?.version ? { version: options.version } : undefined
-        const { data } = await customAxios.get(
+        const { data } = await customAxios.get<string>(
           `/v1/${tenantName}/${encodeURIComponent(resourceId)}`,
           {
             params,
+            responseType: 'text',
+            transformResponse: [(data) => data],
           },
         )
-        const normalized = normalizePayload(data)
-        setParsedJson(normalized.parsed)
+        const normalized = normalizeXmlPayload(data ?? '')
+        setParsedXml(normalized.parsed)
         setInput(normalized.formatted)
         setPayloadSource('fetched')
         setParseError(null)
@@ -377,7 +443,7 @@ export const JsonViewer = () => {
         const message =
           error instanceof Error
             ? error.message
-            : 'Failed to load JSON payload from server.'
+            : 'Failed to load XML payload from server.'
         setFetchError(message)
         return { success: false, error: message }
       } finally {
@@ -388,7 +454,7 @@ export const JsonViewer = () => {
   )
 
   useEffect(() => {
-    if (viewer !== 'json') {
+    if (viewer !== 'xml') {
       return
     }
 
@@ -397,8 +463,8 @@ export const JsonViewer = () => {
     }
 
     if (
-      payloadSource === 'provided-json' ||
-      payloadSource === 'raw-json' ||
+      payloadSource === 'provided-xml' ||
+      payloadSource === 'raw-xml' ||
       payloadSource === 'fetched'
     ) {
       return
@@ -411,12 +477,13 @@ export const JsonViewer = () => {
 
   const handleFormat = () => {
     try {
-      const candidate = JSON.parse(input)
-      setParsedJson(candidate as JsonLike)
+      const normalized = normalizeXmlPayload(input)
+      setParsedXml(normalized.parsed)
+      setInput(normalized.formatted)
       setParseError(null)
-      setPayloadSource('provided-json')
+      setPayloadSource('provided-xml')
     } catch (error) {
-      setParseError(error instanceof Error ? error.message : 'Unable to parse JSON input')
+      setParseError(error instanceof Error ? error.message : 'Unable to parse XML input')
     }
   }
 
@@ -441,59 +508,38 @@ export const JsonViewer = () => {
 
   const handleBrowseDevice = () => {
     setImportError(null)
-    fileInputRef.current?.click()
+    xmlReaderRef.current?.click()
   }
 
-  const handleDeviceFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-
-    if (!file) {
-      return
+  const handleDeviceFileLoaded = (
+    data: unknown,
+    fileInfo: { name: string },
+    _original: File,
+    text: string,
+  ) => {
+    try {
+      const normalized = normalizeXmlPayload(text || data)
+      setParsedXml(normalized.parsed)
+      setInput(normalized.formatted)
+      setParseError(null)
+      setPayloadSource('raw-xml')
+      setSelectedFileName(fileInfo.name)
+      setImportError(null)
+      setSourceDescription(fileInfo.name)
+      setIsImportDialogOpen(false)
+    } catch (error) {
+      setImportError(
+        error instanceof Error ? error.message : 'Unable to parse the selected XML file.',
+      )
     }
+  }
 
-    setSelectedFileName(file.name)
-
-    if (!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json') {
-      setImportError('Please choose a file with a .json extension.')
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        const text =
-          typeof reader.result === 'string'
-            ? reader.result
-            : new TextDecoder().decode(reader.result as ArrayBuffer)
-        const parsed = JSON.parse(text)
-        const normalized = normalizePayload(parsed)
-        setParsedJson(normalized.parsed)
-        setInput(normalized.formatted)
-        setPayloadSource('raw-json')
-        setParseError(null)
-        setFetchError(null)
-        setSourceDescription(file.name)
-        setImportError(null)
-        setSelectedFileName(null)
-        setIsImportDialogOpen(false)
-      } catch (error) {
-        setImportError(
-          error instanceof Error
-            ? error.message
-            : 'Unable to read the selected JSON file. Ensure it contains valid JSON.',
-        )
-      }
-    }
-    reader.onerror = () => {
-      setImportError('Unable to read the selected file. Please try again.')
-    }
-    reader.readAsText(file)
+  const handleDeviceFileError = (error: Error) => {
+    setImportError(error.message)
   }
 
   const handleImportFromCms = async () => {
     if (!selectedCmsOption) {
-      setImportError('Select a JSON file from the CMS');
       return
     }
 
@@ -516,7 +562,7 @@ export const JsonViewer = () => {
 
   const subtitle = sourceDescription
     ? `Inspect payload for ${sourceDescription}`
-    : 'Inspect JSON payloads without leaving the Fluent UI shell.'
+    : 'Inspect XML payloads without leaving the Fluent UI shell.'
 
   return (
     <MainLayout variant="viewer">
@@ -535,29 +581,28 @@ export const JsonViewer = () => {
         <div className={styles.editorsWrapper}>
           <Card className={styles.inputCard}>
             <CardHeader
-              header={<Text weight="semibold">JSON Input</Text>}
+              header={<Text weight="semibold">XML Input</Text>}
               description="Paste or edit the payload, then format to refresh the viewer."
             />
-            <div className={styles.inputCardBody}>
+            <div className={styles.inputCardBody} >
               <Textarea
                 className={styles.textarea}
                 value={input}
                 onChange={(_, data) => setInput(data.value)}
                 resize="none"
                 appearance="outline"
-                style={{ maxHeight: 'inherit' }}
               />
             </div>
             <CardFooter>
               <Button icon={<CheckmarkRegular />} appearance="primary" onClick={handleFormat}>
-                Format JSON
+                Format XML
               </Button>
               <Button
                 icon={<ArrowImportRegular />}
                 appearance="secondary"
                 onClick={openImportDialog}
               >
-                Import JSON
+                Import XML
               </Button>
             </CardFooter>
           </Card>
@@ -569,7 +614,7 @@ export const JsonViewer = () => {
             />
             {isMetadataPayload && (
               <MessageBar intent="info">
-                Showing file metadata. Load the JSON payload to inspect the full content.
+                Showing file metadata. Load the XML payload to inspect the full content.
               </MessageBar>
             )}
             {fetchError && <MessageBar intent="error">{fetchError}</MessageBar>}
@@ -578,10 +623,10 @@ export const JsonViewer = () => {
             ) : (
               <div className={styles.viewerContainer}>
                 {isFetching ? (
-                  <Spinner label="Loading JSON payload" />
+                  <Spinner label="Loading XML payload" />
                 ) : (
                   <JsonView
-                    value={parsedJson}
+                    value={parsedXml}
                     displayDataTypes={false}
                     collapsed={2}
                     enableClipboard={false}
@@ -609,14 +654,14 @@ export const JsonViewer = () => {
       >
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>Import JSON</DialogTitle>
+            <DialogTitle>Import XML</DialogTitle>
             <DialogContent>
               {importError && <MessageBar intent="error">{importError}</MessageBar>}
               <div className={styles.importSections}>
                 <Card className={styles.importCard}>
                   <Text weight="semibold">From your device</Text>
                   <Caption1>
-                    Upload a .json file from your computer. Its contents replace the current viewer
+                    Upload an .xml file from your computer. Its contents replace the current viewer
                     payload.
                   </Caption1>
                   <div className={styles.importActions}>
@@ -629,14 +674,14 @@ export const JsonViewer = () => {
 
                 <Card className={styles.importCard}>
                   <Text weight="semibold">From CMS</Text>
-                  <Caption1>Pick a JSON asset already stored in the content tree.</Caption1>
-                  <Label htmlFor="cms-json-combobox">JSON resources</Label>
+                  <Caption1>Pick an XML asset already stored in the content tree.</Caption1>
+                  <Label htmlFor="cms-xml-combobox">XML resources</Label>
                   <Combobox
-                    id="cms-json-combobox"
+                    id="cms-xml-combobox"
                     placeholder={
-                      cmsJsonOptions.length > 0
-                        ? 'Search JSON files'
-                        : 'No JSON files available'
+                      cmsXmlOptions.length > 0
+                        ? 'Search XML files'
+                        : 'No XML files available'
                     }
                     value={cmsComboboxValue}
                     onChange={(event: ChangeEvent<HTMLInputElement>) => {
@@ -656,9 +701,9 @@ export const JsonViewer = () => {
                         setImportError(null)
                       }
                     }}
-                    disabled={cmsJsonOptions.length === 0}
+                    disabled={cmsXmlOptions.length === 0}
                   >
-                    {cmsJsonOptions.map((option) => (
+                    {cmsXmlOptions.map((option) => (
                       <Option key={option.key} value={option.key} text={option.label}>
                         {option.label}
                       </Option>
@@ -685,13 +730,16 @@ export const JsonViewer = () => {
         </DialogSurface>
       </Dialog>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json,.json"
+      <XMLReader
+        ref={xmlReaderRef}
+        accept="application/xml,text/xml,.xml"
         className={styles.hiddenInput}
-        onChange={handleDeviceFileChange}
+        onFileLoaded={handleDeviceFileLoaded}
+        onError={handleDeviceFileError}
+        parserOptions={xmlParserOptions}
       />
     </MainLayout>
   )
 }
+
+export default XmlViewer

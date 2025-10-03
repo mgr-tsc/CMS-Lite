@@ -11,6 +11,7 @@ interface FileDetailsModalProps {
   onClose: () => void
   onRetry?: () => void
   onOpenJsonViewer?: (resourceId: string, details: ContentItemDetails | null) => void
+  onOpenXmlViewer?: (resourceId: string, details: ContentItemDetails | null) => void
 }
 
 const useStyles = makeStyles({
@@ -75,6 +76,7 @@ export const FileDetailsModal = ({
   onClose,
   onRetry,
   onOpenJsonViewer,
+  onOpenXmlViewer,
 }: FileDetailsModalProps) => {
   const styles = useStyles()
 
@@ -95,6 +97,12 @@ export const FileDetailsModal = ({
       details &&
       (details.contentType?.toLowerCase().includes('json') ||
         details.metadata?.fileExtension?.toLowerCase() === 'json'),
+  )
+  const canOpenXmlViewer = Boolean(
+    resourceId &&
+      details &&
+      (details.contentType?.toLowerCase().includes('xml') ||
+        details.metadata?.fileExtension?.toLowerCase() === 'xml'),
   )
 
   return (
@@ -195,6 +203,18 @@ export const FileDetailsModal = ({
                 }}
               >
                 See in JSON viewer
+              </Link>
+            )}
+            {canOpenXmlViewer && onOpenXmlViewer && resourceId && (
+              <Link
+                className={styles.actionLink}
+                href="#"
+                onClick={(event) => {
+                  event.preventDefault()
+                  onOpenXmlViewer(resourceId, details)
+                }}
+              >
+                See in XML viewer
               </Link>
             )}
             <Button appearance="primary" onClick={onClose} disabled={isLoading}>

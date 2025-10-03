@@ -213,6 +213,7 @@ else
 }
 
 app.UseCmsLiteAuthentication();
+app.UseMiddleware<TenantValidationMiddleware>();
 app.UseRateLimiter();
 app.MapAuthenticationEndpoints();
 app.MapContentEndpoints();

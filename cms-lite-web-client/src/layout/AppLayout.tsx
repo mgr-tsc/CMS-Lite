@@ -31,6 +31,7 @@ import {CreateDirectoryDialog} from '../components/CreateDirectoryDialog'
 import {SoftDeleteDialog, type SoftDeleteItem} from '../components/SoftDeleteDialog'
 import {InfoDialog} from '../components/modals/InfoDialog'
 import customAxios from '../utilities/custom-axios'
+import {sanitizeResourceName} from '../utilities/resource-name'
 import type {ContentItemDetails} from '../types/content'
 
 const useStyles = makeStyles({
@@ -149,6 +150,28 @@ const buildPathString = (segments: string[]): string => {
     return `/${segments.join('/')}`
 }
 
+const extractFilenameFromContentDisposition = (header?: string | null): string | null => {
+    if (!header) {
+        return null
+    }
+
+    const filenameStarMatch = /filename\*=UTF-8''([^;]+)/i.exec(header)
+    if (filenameStarMatch?.[1]) {
+        try {
+            return decodeURIComponent(filenameStarMatch[1])
+        } catch (error) {
+            console.warn('Failed to decode filename from content-disposition.', error)
+        }
+    }
+
+    const quotedMatch = /filename="?([^";]+)"?/i.exec(header)
+    if (quotedMatch?.[1]) {
+        return quotedMatch[1]
+    }
+
+    return null
+}
+
 const appendPathSegment = (basePath: string, segment: string): string => {
     const trimmedSegment = segment.trim()
     if (!trimmedSegment) {
@@ -201,9 +224,10 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         successMessage: null,
     })
     const importFileInputRef = useRef<HTMLInputElement | null>(null)
-    const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | null>(null)
+    const [pendingImportType, setPendingImportType] = useState<'json' | 'xml' | 'pdf' | null>(null)
     const [importAccept, setImportAccept] = useState('')
     const [isImporting, setIsImporting] = useState(false)
+    const [isDownloading, setIsDownloading] = useState(false)
     const [infoDialogState, setInfoDialogState] = useState<InfoDialogState>({
         open: false,
         title: 'Coming soon',
@@ -281,12 +305,17 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         })
     }
 
-    const handleImportContent = (type: 'json' | 'xml') => {
+    const handleImportContent = (type: 'json' | 'xml' | 'pdf') => {
         if (!effectiveDirectory || !user?.tenant?.name) {
             return
         }
 
-        const accept = type === 'json' ? 'application/json,.json' : 'application/xml,text/xml,.xml'
+        const accept =
+            type === 'json'
+                ? 'application/json,.json'
+                : type === 'xml'
+                    ? 'application/xml,text/xml,.xml'
+                    : 'application/pdf,.pdf'
         setPendingImportType(type)
         setImportAccept(accept)
         window.setTimeout(() => {
@@ -302,6 +331,149 @@ export const AppLayout = ({children}: AppLayoutProps) => {
             primaryLabel: 'Close',
             isLoading: false,
         })
+    }
+
+    const handleDownloadContent = async () => {
+        if (selectedFiles.length !== 1 || !effectiveDirectory || !user?.tenant?.name || isDownloading) {
+            return
+        }
+
+        const fileId = selectedFiles[0]
+        const contentItem = effectiveDirectory.contentItems.find((item) => item.id === fileId)
+
+        if (!contentItem) {
+            return
+        }
+
+        const tenantName = user.tenant.name
+        const resourcePath = contentItem.resource
+
+        setIsDownloading(true)
+        setInfoDialogState({
+            open: true,
+            title: 'Downloading file',
+            description: `Preparing download for "${resourcePath}"...`,
+            primaryLabel: 'Close',
+            isLoading: true,
+        })
+
+        try {
+            const response = await customAxios.get(`/v1/${tenantName}/${encodeURIComponent(resourcePath)}`, {
+                responseType: 'blob',
+            })
+
+            const contentType = response.headers['content-type'] as string | undefined
+            const contentDisposition = response.headers['content-disposition'] as string | undefined
+            const fallbackName = resourcePath.split('/').pop() ?? resourcePath
+            const downloadName =
+                extractFilenameFromContentDisposition(contentDisposition) ?? fallbackName
+
+            if (contentType?.includes('application/json')) {
+                const payloadText = await response.data.text()
+                const jsonDownloadName = downloadName.endsWith('.json')
+                    ? downloadName
+                    : `${downloadName}.json`
+                try {
+                    const payload = JSON.parse(payloadText) as { downloadUrl?: string; message?: string }
+                    if (payload?.downloadUrl) {
+                        const link = document.createElement('a')
+                        link.href = payload.downloadUrl
+                        link.target = '_blank'
+                        link.rel = 'noopener'
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+
+                        setInfoDialogState({
+                            open: true,
+                            title: 'Download ready',
+                            description: 'The file is downloading in a new tab.',
+                            primaryLabel: 'Close',
+                            isLoading: false,
+                        })
+                        return
+                    }
+
+                    // Treat as a JSON file payload when metadata is not provided.
+                    const blob = new Blob([payloadText], {
+                        type: contentType ?? 'application/json',
+                    })
+                    const blobUrl = window.URL.createObjectURL(blob)
+                    const link = document.createElement('a')
+                    link.href = blobUrl
+                    link.download = jsonDownloadName
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    window.URL.revokeObjectURL(blobUrl)
+
+                    setInfoDialogState({
+                        open: true,
+                        title: 'Download complete',
+                        description: `File "${jsonDownloadName}" downloaded successfully.`,
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                    return
+                } catch {
+                    const blob = new Blob([payloadText], {
+                        type: contentType ?? 'application/json',
+                    })
+                    const blobUrl = window.URL.createObjectURL(blob)
+                    const link = document.createElement('a')
+                    link.href = blobUrl
+                    link.download = jsonDownloadName
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    window.URL.revokeObjectURL(blobUrl)
+
+                    setInfoDialogState({
+                        open: true,
+                        title: 'Download complete',
+                        description: `File "${jsonDownloadName}" downloaded successfully.`,
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                    return
+                }
+            }
+
+            const blob = response.data as Blob
+            const blobUrl = window.URL.createObjectURL(blob)
+
+            const link = document.createElement('a')
+            link.href = blobUrl
+            link.download = downloadName
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(blobUrl)
+
+            setInfoDialogState({
+                open: true,
+                title: 'Download complete',
+                description: `File "${downloadName}" downloaded successfully.`,
+                primaryLabel: 'Close',
+                isLoading: false,
+            })
+        } catch (error) {
+            console.error('Failed to download file', error)
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to download the selected file. Please try again.'
+
+            setInfoDialogState({
+                open: true,
+                title: 'Download failed',
+                description: `Download failed. ${message}`,
+                primaryLabel: 'Close',
+                isLoading: false,
+            })
+        } finally {
+            setIsDownloading(false)
+        }
     }
 
     const handleDeleteContent = () => {
@@ -508,7 +680,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
 
         const tenantName = user.tenant.name
 
-        const targetPath = appendPathSegment(parentPathDisplay, file.name)
+        const sanitizedResourceName = sanitizeResourceName(file.name)
+        const targetPath = appendPathSegment(parentPathDisplay, sanitizedResourceName)
 
         if (pendingImportType === 'json') {
             const reader = new FileReader()
@@ -521,7 +694,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                                 : new TextDecoder().decode(reader.result as ArrayBuffer)
 
                         JSON.parse(text)
-                        const resourceName = file.name.replace(/\.json$/i, '') || file.name
+                        const resourceName = sanitizedResourceName
 
                         await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
                             headers: {
@@ -597,7 +770,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                             throw new Error('Invalid XML format')
                         }
 
-                        const resourceName = file.name.replace(/\.xml$/i, '') || file.name
+                        const resourceName = sanitizedResourceName
 
                         await customAxios.put(`/v1/${tenantName}/${encodeURIComponent(resourceName)}`, text, {
                             headers: {
@@ -651,6 +824,57 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 isLoading: true,
             })
             reader.readAsText(file)
+            return
+        }
+
+        if (pendingImportType === 'pdf') {
+            setIsImporting(true)
+            setInfoDialogState({
+                open: true,
+                title: 'Importing PDF',
+                description: `Uploading "${file.name}"...`,
+                primaryLabel: 'Close',
+                isLoading: true,
+            })
+
+            void (async () => {
+                try {
+                    const resourceName = sanitizedResourceName
+
+                    await customAxios.put(
+                        `/v1/${tenantName}/${encodeURIComponent(resourceName)}`,
+                        file,
+                        {
+                            headers: {
+                                'Content-Type': file.type || 'application/pdf',
+                                'X-Directory-Id': effectiveDirectory.id,
+                            },
+                        },
+                    )
+
+                    await dispatch(fetchDirectoryTree(tenantName))
+
+                    setInfoDialogState({
+                        open: true,
+                        title: 'Import complete',
+                        description: `File "${file.name}" imported successfully to ${targetPath}.`,
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                } catch {
+                    setInfoDialogState({
+                        open: true,
+                        title: 'PDF upload failed',
+                        description: 'There was a problem uploading the PDF file. Please try again.',
+                        primaryLabel: 'Close',
+                        isLoading: false,
+                    })
+                } finally {
+                    setIsImporting(false)
+                    setPendingImportType(null)
+                }
+            })()
+
             return
         }
 
@@ -756,6 +980,27 @@ export const AppLayout = ({children}: AppLayoutProps) => {
         })
     }
 
+    const handleOpenXmlViewer = (resourceId: string, details: ContentItemDetails | null) => {
+        if (!resourceId) {
+            return
+        }
+
+        const tenantName = user?.tenant?.name
+
+        setDetailsState(prev => ({ ...prev, open: false }))
+        navigate('/tools/xml-viewer', {
+            state: {
+                resourceId,
+                metadata: details,
+                tenantName,
+                contentType: details?.contentType,
+                fileExtension: details?.metadata?.fileExtension,
+                version: details?.latestVersion,
+                viewer: 'xml' as const,
+            },
+        })
+    }
+
     const handleRefresh = () => {
         const tenantName = user?.tenant?.name
         if (tenantName) {
@@ -805,6 +1050,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                             onImportContent={handleImportContent}
                             onCreateContent={handleCreateContent}
                             disableImportContent={!effectiveDirectory || !user?.tenant?.name || isImporting}
+                            canDownload={selectedFiles.length === 1 && !isDownloading}
+                            onDownloadContent={handleDownloadContent}
                             disableCreateContent={!user?.tenant?.name}
                             onDeleteContent={handleDeleteContent}
                             onSeeDetails={handleSeeDetails}
@@ -862,6 +1109,8 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 accept={importAccept}
                 style={{ display: 'none' }}
                 onChange={handleImportFileChange}
+                disabled={isImporting}
+                aria-label='Import file input'
             />
             <FileDetailsModal
                 open={detailsState.open}
@@ -872,6 +1121,7 @@ export const AppLayout = ({children}: AppLayoutProps) => {
                 onClose={handleCloseDetails}
                 onRetry={detailsState.error ? handleRetryDetails : undefined}
                 onOpenJsonViewer={handleOpenJsonViewer}
+                onOpenXmlViewer={handleOpenXmlViewer}
             />
         </div>
     )

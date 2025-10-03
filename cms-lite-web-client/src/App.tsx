@@ -4,7 +4,7 @@ import { AuthProvider } from './contexts'
 // import { purpleTheme } from './themes/purpleTheme'
 import { teamsLightTheme } from "@fluentui/react-components";
 import { ProtectedRoute } from './components'
-import { SignIn, Dashboard, JsonViewer } from './pages'
+import { SignIn, Dashboard, JsonViewer, XmlViewer } from './pages'
 import './App.css'
 import { useEffect } from 'react'
 
@@ -31,6 +31,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <JsonViewer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools/xml-viewer"
+              element={
+                <ProtectedRoute>
+                  <XmlViewer />
                 </ProtectedRoute>
               }
             />

@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CmsLite.Database;
+using Microsoft.EntityFrameworkCore;
 
 namespace CmsLite.Middlewares;
 
@@ -14,7 +16,7 @@ public class TenantValidationMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, CmsLiteDbContext db)
     {
         if (!IsContentEndpoint(context.Request.Path))
         {
@@ -30,9 +32,9 @@ public class TenantValidationMiddleware
 
         try
         {
-            // Extract tenant from URL path
-            var urlTenant = ExtractTenantFromPath(context.Request.Path);
-            if (string.IsNullOrEmpty(urlTenant))
+            // Extract tenant name from URL path
+            var urlTenantName = ExtractTenantFromPath(context.Request.Path);
+            if (string.IsNullOrEmpty(urlTenantName))
             {
                 _logger.LogWarning("Could not extract tenant from path: {Path}", context.Request.Path);
                 context.Response.StatusCode = 400;
@@ -40,7 +42,7 @@ public class TenantValidationMiddleware
                 return;
             }
 
-            // Get user's tenant from JWT claims
+            // Get user's tenant ID from JWT claims
             var userTenantId = context.User.FindFirst(ClaimTypes.GroupSid)?.Value;
             if (string.IsNullOrEmpty(userTenantId))
             {
@@ -50,21 +52,35 @@ public class TenantValidationMiddleware
                 return;
             }
 
-            // Validate tenant access
-            // For now, we'll use simple string comparison since we don't have tenant name resolution
-            // TODO: Implement proper tenant ID to name mapping
-            if (!string.Equals(urlTenant, userTenantId, StringComparison.OrdinalIgnoreCase))
+            // Look up the tenant ID from the tenant name in the URL
+            var urlTenant = await db.TenantsTable
+                .Where(t => t.Name == urlTenantName)
+                .Select(t => new { t.Id, t.Name })
+                .FirstOrDefaultAsync();
+
+            if (urlTenant == null)
             {
-                var userId = context.User.FindFirst(ClaimTypes.PrimarySid)?.Value;
-                _logger.LogWarning("Tenant access denied. User: {UserId}, UserTenant: {UserTenant}, RequestedTenant: {RequestedTenant}",
-                    userId, userTenantId, urlTenant);
-                context.Response.StatusCode = 403;
-                await context.Response.WriteAsync($"Access denied to tenant '{urlTenant}'");
+                _logger.LogWarning("Tenant not found: {TenantName}", urlTenantName);
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync($"Tenant '{urlTenantName}' not found");
                 return;
             }
+
+            // Validate tenant access - compare tenant IDs
+            if (!string.Equals(urlTenant.Id, userTenantId, StringComparison.OrdinalIgnoreCase))
+            {
+                var userId = context.User.FindFirst(ClaimTypes.PrimarySid)?.Value;
+                _logger.LogWarning("Tenant access denied. User: {UserId}, UserTenantId: {UserTenantId}, RequestedTenantId: {RequestedTenantId}, RequestedTenantName: {RequestedTenantName}",
+                    userId, userTenantId, urlTenant.Id, urlTenant.Name);
+                context.Response.StatusCode = 403;
+                await context.Response.WriteAsync($"Access denied to tenant '{urlTenantName}'");
+                return;
+            }
+
             // Add tenant info to HttpContext for easy access in endpoints
             context.Items["TenantId"] = userTenantId;
-            context.Items["UrlTenant"] = urlTenant;
+            context.Items["UrlTenantName"] = urlTenantName;
+
             await _next(context);
         }
         catch (Exception ex)

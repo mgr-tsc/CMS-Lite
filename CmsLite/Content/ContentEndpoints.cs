@@ -21,14 +21,16 @@ public static class ContentEndpoints
             HttpRequest req,
             CmsLiteDbContext db,
             IBlobRepo blobs,
-            IDirectoryRepo directoryRepo) =>
+            IDirectoryRepo directoryRepo,
+            ILogger<Program> logger,
+            CancellationToken cancellationToken) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
             // Validate content type is specified
             if (string.IsNullOrEmpty(req.ContentType))
             {
-                return Results.BadRequest("Content-Type header is required. Supported types: application/json, application/xml, text/xml");
+                return Results.BadRequest("Content-Type header is required. Supported types: application/json, application/xml, text/xml, application/pdf");
             }
 
             // Parse and validate supported content type
@@ -47,16 +49,38 @@ public static class ContentEndpoints
             if (bytes.Length == 0) return Results.BadRequest("Empty body.");
 
             // Validate content format
-            var isValidContent = contentType switch
+            if (contentType == SupportedContentType.Pdf)
             {
-                SupportedContentType.Json => Utilities.IsValidJson(bytes),
-                SupportedContentType.Xml => Utilities.IsValidXml(bytes),
-                _ => false
-            };
+                // Use comprehensive PDF validation with PdfSharp
+                var pdfValidationOptions = new PdfValidationOptions
+                {
+                    MaxFileSizeBytes = 8388608, // 8 MB
+                    MaxPageCount = 1000,
+                    AllowPasswordProtected = false,
+                    ScanForEmbeddedFiles = true,
+                    ScanForJavaScript = true
+                };
 
-            if (!isValidContent)
+                var pdfValidationResult = PdfValidator.ValidatePdf(bytes, pdfValidationOptions, logger);
+                if (!pdfValidationResult.IsValid)
+                {
+                    return Results.BadRequest(pdfValidationResult.ErrorMessage);
+                }
+            }
+            else
             {
-                return Results.BadRequest($"Invalid {contentType.ToString().ToLower()} content format.");
+                // Use basic validation for JSON and XML
+                var isValidContent = contentType switch
+                {
+                    SupportedContentType.Json => Utilities.IsValidJson(bytes),
+                    SupportedContentType.Xml => Utilities.IsValidXml(bytes),
+                    _ => false
+                };
+
+                if (!isValidContent)
+                {
+                    return Results.BadRequest($"Invalid {contentType.ToString().ToLower()} content format.");
+                }
             }
 
             // Calculate content integrity hash
@@ -117,7 +141,13 @@ public static class ContentEndpoints
                             DirectoryId = directoryId,
                             Resource = resource,
                             LatestVersion = nextVersion,
-                            ContentType = contentType == SupportedContentType.Json ? "application/json" : "application/xml",
+                            ContentType = contentType switch
+                            {
+                                SupportedContentType.Json => "application/json",
+                                SupportedContentType.Xml => "application/xml",
+                                SupportedContentType.Pdf => "application/pdf",
+                                _ => "application/json"
+                            },
                             ByteSize = size,
                             Sha256 = sha256,
                             ETag = etag,
@@ -135,7 +165,13 @@ public static class ContentEndpoints
                         item.ETag = etag;
                         item.UpdatedAtUtc = DateTime.UtcNow;
                         item.IsDeleted = false;
-                        item.ContentType = contentType == SupportedContentType.Json ? "application/json" : "application/xml";
+                        item.ContentType = contentType switch
+                        {
+                            SupportedContentType.Json => "application/json",
+                            SupportedContentType.Xml => "application/xml",
+                            SupportedContentType.Pdf => "application/pdf",
+                            _ => "application/json"
+                        };
                     }
                     // Create version history record
                     db.ContentVersionsTable.Add(new DbSet.ContentVersion
@@ -148,7 +184,7 @@ public static class ContentEndpoints
                         ETag = etag,
                         CreatedAtUtc = DateTime.UtcNow
                     });
-                    await db.SaveChangesAsync();
+                    await db.SaveChangesAsync(cancellationToken);
                     return Results.Created($"/v1/{tenant}/{resource}?version={nextVersion}", new { tenant, resource, version = nextVersion, etag, sha256, size = Helpers.Utilities.CalculateFileSizeInBestUnit(size) });
                 }
                 catch (Exception)
@@ -190,7 +226,8 @@ public static class ContentEndpoints
             int? version,
             HttpResponse res,
             CmsLiteDbContext db,
-            IBlobRepo blobs) =>
+            IBlobRepo blobs,
+            CancellationToken cancellationToken) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
@@ -199,19 +236,33 @@ public static class ContentEndpoints
             if (!tenantSuccess) return tenantError!;
 
             var latest = await db.ContentItemsTable
-                .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource && x.IsDeleted == false);
+                .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource && x.IsDeleted == false, cancellationToken);
             if (latest == null) return Results.NotFound();
-
             var v = version ?? latest.LatestVersion;
             // Determine blob key based on stored content type
-            var contentTypeEnum = latest.ContentType == "application/xml" ? SupportedContentType.Xml : SupportedContentType.Json;
+            SupportedContentType contentTypeEnum;
+            switch (latest.ContentType)
+            {
+                case "application/json":
+                    contentTypeEnum = SupportedContentType.Json;
+                    break;
+                case "application/xml":
+                    contentTypeEnum = SupportedContentType.Xml;
+                    break;
+                case "application/pdf":
+                    contentTypeEnum = SupportedContentType.Pdf;
+                    break;
+                default:
+                    return Results.BadRequest($"Unsupported content type: {latest.ContentType}");
+            }
+
             var blobKey = Utilities.GenerateBlobKey(tenant, resource, v, contentTypeEnum);
             var blob = await blobs.DownloadAsync(blobKey);
             if (blob == null) return Results.NotFound();
 
             res.ContentType = latest.ContentType;
             res.Headers.ETag = blob.Value.ETag;
-            await res.Body.WriteAsync(blob.Value.Bytes);
+            await res.Body.WriteAsync(blob.Value.Bytes, cancellationToken);
             return Results.Empty;
         }).RequireAuthorization()
         .WithName("GetContent")
@@ -226,7 +277,8 @@ public static class ContentEndpoints
             int? version,
             HttpResponse res,
             CmsLiteDbContext db,
-            IBlobRepo blobs) =>
+            IBlobRepo blobs,
+            CancellationToken cancellationToken) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
@@ -235,12 +287,17 @@ public static class ContentEndpoints
             if (!tenantSuccess) return tenantError!;
 
             var latest = await db.ContentItemsTable
-                .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource && x.IsDeleted == false);
+                .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Resource == resource && x.IsDeleted == false, cancellationToken);
             if (latest == null) return Results.NotFound();
 
             var v = version ?? latest.LatestVersion;
             // Determine blob key based on stored content type
-            var contentTypeEnum = latest.ContentType == "application/xml" ? SupportedContentType.Xml : SupportedContentType.Json;
+            var contentTypeEnum = latest.ContentType switch
+            {
+                "application/xml" => SupportedContentType.Xml,
+                "application/pdf" => SupportedContentType.Pdf,
+                _ => SupportedContentType.Json
+            };
             var blobKey = Utilities.GenerateBlobKey(tenant, resource, v, contentTypeEnum);
             var head = await blobs.HeadAsync(blobKey);
             if (head == null) return Results.NotFound();
@@ -263,7 +320,8 @@ public static class ContentEndpoints
             bool? includeDeleted,
             int? limit,
             string? cursor,
-            CmsLiteDbContext db) =>
+            CmsLiteDbContext db,
+            CancellationToken cancellationToken) =>
         {
             var take = Math.Clamp(limit ?? 50, 1, 200);
             // Get the actual tenant ID from the tenant name
@@ -288,7 +346,7 @@ public static class ContentEndpoints
             var page = await q.Where(x => x.Id > afterId)
                             .OrderBy(x => x.Id)
                             .Take(take + 1)
-                            .ToListAsync();
+                            .ToListAsync(cancellationToken);
 
             string? next = page.Count > take ? page[^1].Id.ToString() : null;
             if (page.Count > take) page.RemoveAt(page.Count - 1);
@@ -316,7 +374,8 @@ public static class ContentEndpoints
         contentGroup.MapDelete("/{tenant}/{resource}", async (
             string tenant,
             string resource,
-            CmsLiteDbContext db) =>
+            CmsLiteDbContext db,
+            CancellationToken cancellationToken) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 
@@ -330,7 +389,7 @@ public static class ContentEndpoints
 
             item.IsDeleted = true;
             item.UpdatedAtUtc = DateTime.UtcNow;
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.NoContent();
         }).RequireAuthorization()
@@ -346,12 +405,13 @@ public static class ContentEndpoints
                                 // due to .NET 8 Minimal API limitation with DELETE + request body + authorization.
                                 // Direct model binding causes authorization middleware conflicts on DELETE endpoints.
             CmsLiteDbContext db,
-            IDirectoryRepo directoryRepo) =>
+            IDirectoryRepo directoryRepo,
+            CancellationToken cancellationToken) =>
         {
             tenant = tenant.Trim();
 
             // Read and parse JSON request body manually (see comment above for why)
-            var deleteRequest = await request.ReadFromJsonAsync<SoftDeleteRequest>();
+            var deleteRequest = await request.ReadFromJsonAsync<SoftDeleteRequest>(cancellationToken);
             if (deleteRequest == null)
             {
                 return Results.BadRequest(new SoftDeleteErrorResponse
@@ -395,7 +455,7 @@ public static class ContentEndpoints
             }
 
             // Begin atomic transaction
-            using var transaction = await db.Database.BeginTransactionAsync();
+            using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
             try
             {
                 // Fetch all resources to delete
@@ -404,7 +464,7 @@ public static class ContentEndpoints
                     .Where(x => x.TenantId == tenantId &&
                                cleanResources.Contains(x.Resource) &&
                                !x.IsDeleted)
-                    .ToListAsync();
+                    .ToListAsync(cancellationToken);
 
                 // Check if any resources were not found
                 var foundResources = itemsToDelete.Select(x => x.Resource).ToHashSet();
@@ -457,10 +517,10 @@ public static class ContentEndpoints
                 }
 
                 // Save changes
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
 
                 // Commit transaction
-                await transaction.CommitAsync();
+                await transaction.CommitAsync(cancellationToken);
 
                 // Return success response
                 var response = new SoftDeleteResponse
@@ -479,7 +539,7 @@ public static class ContentEndpoints
             catch (Exception ex)
             {
                 // Rollback transaction on any error
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(cancellationToken);
 
                 return Results.BadRequest(new SoftDeleteErrorResponse
                 {
@@ -498,7 +558,8 @@ public static class ContentEndpoints
         contentGroup.MapGet("/{tenant}/{resource}/versions", async (
             string tenant,
             string resource,
-            CmsLiteDbContext db) =>
+            CmsLiteDbContext db,
+            CancellationToken cancellationToken) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
             // Get the actual tenant ID from the tenant name
@@ -516,7 +577,7 @@ public static class ContentEndpoints
                     x.ByteSize,
                     x.CreatedAtUtc
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             if (versions.Count == 0) return Results.NotFound();
             return Results.Ok(versions);
@@ -531,7 +592,8 @@ public static class ContentEndpoints
             string tenant,
             string resource,
             CmsLiteDbContext db,
-            IContentItemRepo contentItemRepo) =>
+            IContentItemRepo contentItemRepo,
+            CancellationToken cancellationToken) =>
         {
             (tenant, resource) = Utilities.ParseTenantResource(tenant, resource);
 

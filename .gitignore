@@ -80,4 +80,5 @@ CmsLite/cms.sqlite-*
 *.csx
 .env.local
 AGENTS.md
+.DS_Store
 azure_cli.md

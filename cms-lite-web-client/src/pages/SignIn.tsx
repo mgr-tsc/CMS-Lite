@@ -18,7 +18,8 @@ import {
 } from '@fluentui/react-components'
 import {PersonRegular, LockClosedRegular, EyeRegular, EyeOffRegular} from '@fluentui/react-icons'
 import {useAuth} from '../contexts'
-import {FileKeeperIllustration} from '../components/icons/FileKeeperIllustration'
+//import {FileKeeperIllustration} from '../components/icons/FileKeeperIllustration'
+import {FileKeeper} from "../components/icons/FileKeeper";
 
 const useStyles = makeStyles({
     root: {
@@ -153,7 +154,7 @@ export const SignIn = () => {
         <div className={styles.root}>
             <div className={styles.card}>
                 <div className={styles.panel}>
-                    <div className={styles.panelImage}><FileKeeperIllustration/></div>
+                    <div className={styles.panelImage}><FileKeeper/></div>
                     <Title3 as="h1" className={styles.panelTitle}>Welcome to FileKeeper</Title3>
                     <Body1 className={styles.panelText}>
                         Your secure and reliable solution for file management. Access your world, simplified.

@@ -11,10 +11,10 @@ import {
 import {
   FolderAddRegular,
   ArrowImportRegular,
-  AddRegular,
   DeleteRegular,
   EyeRegular,
   ArrowSyncRegular,
+  ArrowDownloadRegular,
 } from '@fluentui/react-icons'
 import { ACTION_BAR, BREAKPOINTS } from './layoutConstants'
 
@@ -54,17 +54,21 @@ const useStyles = makeStyles({
   },
 })
 
+type ImportContentType = 'json' | 'xml' | 'pdf'
+
 interface ActionBarProps {
   hasSelection: boolean
   onNewDirectory?: () => void
   disableNewDirectory?: boolean
-  onImportContent?: (type: 'json' | 'xml') => void
+  onImportContent?: (type: ImportContentType) => void
   onCreateContent?: (type: 'json' | 'xml') => void
   disableImportContent?: boolean
   disableCreateContent?: boolean
   onDeleteContent?: () => void
   onSeeDetails?: () => void
   onRefresh?: () => void
+  canDownload?: boolean
+  onDownloadContent?: () => void
 }
 
 export const ActionBar = ({
@@ -72,12 +76,12 @@ export const ActionBar = ({
   onNewDirectory,
   disableNewDirectory,
   onImportContent,
-  onCreateContent,
   disableImportContent,
-  disableCreateContent,
   onDeleteContent,
   onSeeDetails,
   onRefresh,
+  canDownload,
+  onDownloadContent,
 }: ActionBarProps) => {
   const styles = useStyles()
 
@@ -107,24 +111,7 @@ export const ActionBar = ({
             <MenuList>
               <MenuItem onClick={() => onImportContent?.('json')}>JSON</MenuItem>
               <MenuItem onClick={() => onImportContent?.('xml')}>XML</MenuItem>
-            </MenuList>
-          </MenuPopover>
-        </Menu>
-
-        <Menu>
-          <MenuTrigger disableButtonEnhancement>
-            <Button
-              appearance="primary"
-              icon={<AddRegular />}
-              disabled={disableCreateContent}
-            >
-              Create
-            </Button>
-          </MenuTrigger>
-          <MenuPopover>
-            <MenuList>
-              <MenuItem onClick={() => onCreateContent?.('json')}>JSON</MenuItem>
-              <MenuItem onClick={() => onCreateContent?.('xml')}>XML</MenuItem>
+              <MenuItem onClick={() => onImportContent?.('pdf')}>PDF</MenuItem>
             </MenuList>
           </MenuPopover>
         </Menu>
@@ -138,6 +125,14 @@ export const ActionBar = ({
       </div>
 
       <div className={styles.buttonGroup}>
+        <Button
+          icon={<ArrowDownloadRegular />}
+          disabled={!canDownload}
+          onClick={onDownloadContent}
+        >
+          Download
+        </Button>
+
         <Button
           icon={<EyeRegular />}
           disabled={!hasSelection}

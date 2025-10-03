@@ -97,7 +97,7 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
     console.log('Creating new directory...')
   }
 
-  const handleImportContent = (type: 'json' | 'xml') => {
+  const handleImportContent = (type: 'json' | 'xml' | 'pdf') => {
     console.log(`Import ${type.toUpperCase()} content...`)
   }
 
@@ -114,6 +114,12 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
   const handleSeeDetails = () => {
     if (selectedItem) {
       console.log('Showing details for:', selectedItem.name)
+    }
+  }
+
+  const handleDownloadContent = () => {
+    if (selectedFiles.length === 1) {
+      console.log('Downloading content...')
     }
   }
 
@@ -160,6 +166,8 @@ export const MainLayout = ({ children, variant = 'explorer' }: MainLayoutProps) 
             onCreateContent={handleCreateContent}
             disableImportContent={false}
             disableCreateContent={false}
+            canDownload={selectedFiles.length === 1}
+            onDownloadContent={handleDownloadContent}
             onDeleteContent={handleDeleteContent}
             onSeeDetails={handleSeeDetails}
             onRefresh={handleRefresh}
