@@ -95,24 +95,28 @@ public class TenantValidationMiddleware
     //TODO: Improve path matching and tenant extraction logic
     private static bool IsContentEndpoint(PathString path)
     {
-        // Check if path matches content API pattern: /v1/{tenant}/{resource}
+        // Check if path matches content API pattern: /api/v1/{tenant}/{resource}
         var segments = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-        if (segments == null || segments.Length < 3)
+        if (segments == null || segments.Length < 4)
             return false;
 
-        // Must start with v1 and have at least tenant and resource
-        return segments[0].Equals("v1", StringComparison.OrdinalIgnoreCase) && segments.Length >= 3;
+        // Must start with api/v1 and have at least tenant and resource
+        return segments[0].Equals("api", StringComparison.OrdinalIgnoreCase) &&
+               segments[1].Equals("v1", StringComparison.OrdinalIgnoreCase) &&
+               segments.Length >= 4;
     }
 
     private static string? ExtractTenantFromPath(PathString path)
     {
-        // Extract tenant from path like: /v1/{tenant}/{resource}
+        // Extract tenant from path like: /api/v1/{tenant}/{resource}
         var segments = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments == null || segments.Length < 3)
+        if (segments == null || segments.Length < 4)
             return null;
-        if (!segments[0].Equals("v1", StringComparison.OrdinalIgnoreCase))
+        if (!segments[0].Equals("api", StringComparison.OrdinalIgnoreCase))
             return null;
-        return segments[1]; // Return the tenant segment
+        if (!segments[1].Equals("v1", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return segments[2]; // Return the tenant segment
     }
 }

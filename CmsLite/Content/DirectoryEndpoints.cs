@@ -184,7 +184,7 @@ public static class DirectoryEndpoints
                     IsRoot = directory.ParentId == null
                 };
 
-                return Results.Created($"/v1/{tenant}/directories/{directory.Id}", result);
+                return Results.Created($"/api/v1/{tenant}/directories/{directory.Id}", result);
             }
             catch (InvalidOperationException ex)
             {
