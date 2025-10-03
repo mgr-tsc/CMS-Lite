@@ -69,7 +69,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./docker
-          file: ./docker/Dockerfile.nginx
+          file: ./docker/Dockerfile.nginx-aci
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'workflow_dispatch' || inputs.push != 'false' }}
           tags: ${{ steps.meta.outputs.tags }}
