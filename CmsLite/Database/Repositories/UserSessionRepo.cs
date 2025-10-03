@@ -14,7 +14,7 @@ public class UserSessionRepo : IUserSessionRepo
 
     public async Task<DbSet.UserSession?> GetSessionByIdAsync(string sessionId, CancellationToken cancellationToken = default)
     {
-        return await dbContext.UserSessionsTable.FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken: cancellationToken);
+        return await dbContext.UserSessionsTable.Include(e => e.User).FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken: cancellationToken);
     }
 
     public async Task CreateSessionAsync(DbSet.UserSession session, CancellationToken cancellationToken = default)

@@ -101,18 +101,29 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
                 return null;
             }
 
-            // Update the existing session with new token and session ID
-            session.JwtToken = newToken;
-            session.Id = newSessionId; // Token rotation - invalidate old session ID
-            session.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30);
-
+            // Revoke the old session (token rotation security)
+            session.IsRevoked = true;
+            session.JwtToken = string.Empty;
             await userSessionRepo.UpdateSessionAsync(session, cancellationToken);
+
+            // Create new session with new ID and token
+            var newSession = new DbSet.UserSession
+            {
+                Id = newSessionId,
+                User = session.User,
+                UserId = userId,
+                JwtToken = newToken,
+                CreatedAtUtc = DateTime.UtcNow,
+                ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30),
+                IsRevoked = false
+            };
+            await userSessionRepo.CreateSessionAsync(newSession, cancellationToken);
 
             return new RefreshTokenResult
             {
                 NewToken = newToken,
                 SessionId = newSessionId,
-                ExpiresAt = session.ExpiresAtUtc
+                ExpiresAt = newSession.ExpiresAtUtc
             };
         }
         catch (Exception ex)
@@ -150,10 +161,11 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
 
     public async Task<DbSet.UserSession> CreateUserSessionAsync(DbSet.User user, CancellationToken cancellationToken = default)
     {
-        var jwtToken = GenerateToken(user.Id, user.TenantId) ?? throw new InvalidOperationException("Failed to generate JWT token");
+        var sessionId = Guid.NewGuid().ToString();
+        var jwtToken = GenerateToken(user.Id, user.TenantId, sessionId) ?? throw new InvalidOperationException("Failed to generate JWT token");
         var session = new DbSet.UserSession
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = sessionId,
             User = user,
             UserId = user.Id,
             JwtToken = jwtToken,
@@ -179,14 +191,14 @@ public class CmsLiteAuthenticationService : ICmsLiteAuthenticationService
     {
         // Extend the session expiration time
         session.ExpiresAtUtc = DateTime.UtcNow.AddMinutes(30);
-        
+
         // Optionally generate a new token for enhanced security
-        var newToken = GenerateToken(session.UserId, session.User.TenantId);
+        var newToken = GenerateToken(session.UserId, session.User.TenantId, session.Id);
         if (newToken != null)
         {
             session.JwtToken = newToken;
         }
-        
+
         await userSessionRepo.UpdateSessionAsync(session, cancellationToken);
         return session;
     }

@@ -179,8 +179,7 @@ public static class AuthenticationEndpoints
                 Console.WriteLine($"Token refresh error: {ex.Message}");
                 return Results.Unauthorized();
             }
-        }).RequireAuthorization()
-        .WithName("RefreshToken")
+        }).WithName("RefreshToken")
         .WithSummary("Refresh authentication token")
         .WithDescription("Generate a new token from an existing valid token")
         .RequireRateLimiting("auth");
