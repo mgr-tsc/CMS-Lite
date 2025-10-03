@@ -3,7 +3,6 @@ services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     command: "azurite --blobHost 0.0.0.0"
-    ports: ["10000:10000"]
     volumes: ["azurite:/data"]
 
   api:
@@ -24,19 +23,28 @@ services:
       Jwt__ValidateAudience: "false"
       Jwt__ValidateLifetime: "true"
       Jwt__ValidateIssuerSigningKey: "true"
-    ports: ["8080:8080"]
     depends_on:
       - azurite
     volumes:
       - ./data:/data
-  
+
   web:
     build:
       context: ..
       dockerfile: ./docker/Dockerfile.web
-    ports: ["9090:9090"]
     depends_on:
       - api
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - web
 
 volumes:
   azurite:
