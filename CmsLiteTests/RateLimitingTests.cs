@@ -6,12 +6,20 @@ using Xunit;
 
 namespace CmsLiteTests;
 
-public class RateLimitingTests
+/// <summary>
+/// Tests for rate limiting behavior.
+/// Note: Rate limiting tests share a factory instance for consistency with other test classes,
+/// but this means tests share rate limiting state. Tests are designed to be robust to this.
+/// </summary>
+public class RateLimitingTests : IAsyncDisposable
 {
+    private readonly CmsLiteTestFactoryAuth factory = new();
+
+    public async ValueTask DisposeAsync() => await factory.DisposeAsync();
+
     [Fact]
     public async Task AuthEndpoint_ExceedsRateLimit_Returns429()
     {
-        await using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
@@ -47,7 +55,6 @@ public class RateLimitingTests
     [Fact]
     public async Task ContentReadEndpoint_WithAuthentication_RespectsRateLimit()
     {
-        await using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
@@ -73,7 +80,6 @@ public class RateLimitingTests
     [Fact]
     public async Task ContentWriteEndpoint_WithAuthentication_RespectsRateLimit()
     {
-        await using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
@@ -96,7 +102,6 @@ public class RateLimitingTests
     [Fact]
     public async Task BulkOperations_RespectsRateLimit()
     {
-        await using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
         var client = factory.CreateAuthenticatedClient();
 
@@ -128,7 +133,6 @@ public class RateLimitingTests
     [Fact]
     public async Task RateLimit_Headers_AreCorrectlySet()
     {
-        await using var factory = new CmsLiteTestFactoryAuth();
         await factory.InitializeAsync();
         var client = factory.CreateClient();
 
