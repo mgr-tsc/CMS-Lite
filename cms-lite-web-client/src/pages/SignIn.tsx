@@ -21,6 +21,9 @@ import {PersonRegular, LockClosedRegular, EyeRegular, EyeOffRegular} from '@flue
 import {useAuth} from '../contexts'
 //import {FileKeeperIllustration} from '../components/icons/FileKeeperIllustration'
 import {FileKeeper} from "../components/icons/FileKeeper";
+import {GoogleIcon} from "../components/icons/GoogleIcon";
+import {MicrosoftIcon} from "../components/icons/MicrosoftIcon";
+import {GitHubIcon} from "../components/icons/GitHubIcon";
 
 const useStyles = makeStyles({
     root: {
@@ -150,16 +153,18 @@ const useStyles = makeStyles({
 
     oauthButton: {
         width: '100%',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
+        ...shorthands.gap(tokens.spacingHorizontalM),
     },
 
     googleButton: {
         backgroundColor: '#ffffff',
         color: '#3c4043',
-        ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke1),
+        ...shorthands.border('1px', 'solid', '#dadce0'),
         ':hover': {
             backgroundColor: '#f8f9fa',
-            ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
+            ...shorthands.border('1px', 'solid', '#d2e3fc'),
+            boxShadow: '0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15)',
         },
         ':active': {
             backgroundColor: '#f1f3f4',
@@ -167,15 +172,15 @@ const useStyles = makeStyles({
     },
 
     microsoftButton: {
-        backgroundColor: '#2f2f2f',
-        color: '#ffffff',
-        ...shorthands.border('1px', 'solid', '#2f2f2f'),
+        backgroundColor: '#ffffff',
+        color: '#5e5e5e',
+        ...shorthands.border('1px', 'solid', '#8c8c8c'),
         ':hover': {
-            backgroundColor: '#1f1f1f',
-            ...shorthands.border('1px', 'solid', '#1f1f1f'),
+            backgroundColor: '#f3f2f1',
+            ...shorthands.border('1px', 'solid', '#8c8c8c'),
         },
         ':active': {
-            backgroundColor: '#0f0f0f',
+            backgroundColor: '#edebe9',
         },
     },
 
@@ -184,11 +189,11 @@ const useStyles = makeStyles({
         color: '#ffffff',
         ...shorthands.border('1px', 'solid', '#24292e'),
         ':hover': {
-            backgroundColor: '#1b1f23',
-            ...shorthands.border('1px', 'solid', '#1b1f23'),
+            backgroundColor: '#2c3135',
+            ...shorthands.border('1px', 'solid', '#2c3135'),
         },
         ':active': {
-            backgroundColor: '#0d1117',
+            backgroundColor: '#1b1f23',
         },
     },
 });
@@ -261,6 +266,7 @@ export const SignIn = () => {
                             size="large"
                             className={mergeClasses(styles.oauthButton, styles.googleButton)}
                             onClick={handleGoogleSignIn}
+                            icon={<GoogleIcon />}
                         >
                             Continue with Google
                         </Button>
@@ -270,6 +276,7 @@ export const SignIn = () => {
                             size="large"
                             className={mergeClasses(styles.oauthButton, styles.microsoftButton)}
                             onClick={handleMicrosoftSignIn}
+                            icon={<MicrosoftIcon />}
                         >
                             Continue with Microsoft
                         </Button>
@@ -279,6 +286,7 @@ export const SignIn = () => {
                             size="large"
                             className={mergeClasses(styles.oauthButton, styles.githubButton)}
                             onClick={handleGitHubSignIn}
+                            icon={<GitHubIcon />}
                         >
                             Continue with GitHub
                         </Button>
