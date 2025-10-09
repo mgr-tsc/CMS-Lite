@@ -160,10 +160,11 @@ const useStyles = makeStyles({
     googleButton: {
         backgroundColor: '#ffffff',
         color: '#3c4043',
-        ...shorthands.border('1px', 'solid', '#dadce0'),
+        ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
         ':hover': {
-            backgroundColor: '#f8f9fa',
-            ...shorthands.border('1px', 'solid', '#d2e3fc'),
+            backgroundColor: tokens.colorBrandBackground,
+            color: '#ffffff',
+            ...shorthands.border('1px', 'solid', tokens.colorBrandBackground),
             boxShadow: '0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15)',
         },
         ':active': {
@@ -174,10 +175,11 @@ const useStyles = makeStyles({
     microsoftButton: {
         backgroundColor: '#ffffff',
         color: '#5e5e5e',
-        ...shorthands.border('1px', 'solid', '#8c8c8c'),
+        ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
         ':hover': {
-            backgroundColor: '#f3f2f1',
-            ...shorthands.border('1px', 'solid', '#8c8c8c'),
+            backgroundColor: tokens.colorBrandBackground,
+            color: '#ffffff',
+            ...shorthands.border('1px', 'solid', tokens.colorBrandBackground),
         },
         ':active': {
             backgroundColor: '#edebe9',
@@ -187,10 +189,11 @@ const useStyles = makeStyles({
     githubButton: {
         backgroundColor: '#24292e',
         color: '#ffffff',
-        ...shorthands.border('1px', 'solid', '#24292e'),
+        ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
         ':hover': {
-            backgroundColor: '#2c3135',
-            ...shorthands.border('1px', 'solid', '#2c3135'),
+            backgroundColor: tokens.colorBrandBackground,
+            color: '#ffffff',
+            ...shorthands.border('1px', 'solid', tokens.colorBrandBackground),
         },
         ':active': {
             backgroundColor: '#1b1f23',
@@ -259,44 +262,7 @@ export const SignIn = () => {
                         <Title3 as="h2">Sign In</Title3>
                         <Body1>Enter your details below to access your account.</Body1>
                     </header>
-
-                    <div className={styles.oauthContainer}>
-                        <Button
-                            appearance="secondary"
-                            size="large"
-                            className={mergeClasses(styles.oauthButton, styles.googleButton)}
-                            onClick={handleGoogleSignIn}
-                            icon={<GoogleIcon />}
-                        >
-                            Continue with Google
-                        </Button>
-
-                        <Button
-                            appearance="secondary"
-                            size="large"
-                            className={mergeClasses(styles.oauthButton, styles.microsoftButton)}
-                            onClick={handleMicrosoftSignIn}
-                            icon={<MicrosoftIcon />}
-                        >
-                            Continue with Microsoft
-                        </Button>
-
-                        <Button
-                            appearance="secondary"
-                            size="large"
-                            className={mergeClasses(styles.oauthButton, styles.githubButton)}
-                            onClick={handleGitHubSignIn}
-                            icon={<GitHubIcon />}
-                        >
-                            Continue with GitHub
-                        </Button>
-                    </div>
-
-                    <div className={styles.divider}>
-                        <Caption1 className={styles.dividerText}>or</Caption1>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className={styles.form}>
+                                        <form onSubmit={handleSubmit} className={styles.form}>
                         {error && (
                             <MessageBar intent="error">
                                 <MessageBarBody>
@@ -353,6 +319,44 @@ export const SignIn = () => {
                             <Caption1>Password: biggerThan_6_chars</Caption1>
                         </div>
                     </form>
+
+                    <div className={styles.divider}>
+                        <Caption1 className={styles.dividerText}>or</Caption1>
+                    </div>
+
+                    <div className={styles.oauthContainer}>
+                        <Button
+                            appearance="secondary"
+                            size="large"
+                            className={mergeClasses(styles.oauthButton, styles.googleButton)}
+                            onClick={handleGoogleSignIn}
+                            icon={<GoogleIcon />}
+                        >
+                            Continue with Google
+                        </Button>
+
+                        <Button
+                            appearance="secondary"
+                            size="large"
+                            className={mergeClasses(styles.oauthButton, styles.microsoftButton)}
+                            onClick={handleMicrosoftSignIn}
+                            icon={<MicrosoftIcon />}
+                        >
+                            Continue with Microsoft
+                        </Button>
+
+                        <Button
+                            appearance="secondary"
+                            size="large"
+                            className={mergeClasses(styles.oauthButton, styles.githubButton)}
+                            onClick={handleGitHubSignIn}
+                            icon={<GitHubIcon />}
+                        >
+                            Continue with GitHub
+                        </Button>
+                    </div>
+
+
 
                     <footer className={styles.footer}>
                         <Caption1>
