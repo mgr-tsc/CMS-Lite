@@ -15,11 +15,15 @@ import {
     MessageBarBody,
     MessageBarTitle,
     Spinner,
+    mergeClasses,
 } from '@fluentui/react-components'
 import {PersonRegular, LockClosedRegular, EyeRegular, EyeOffRegular} from '@fluentui/react-icons'
 import {useAuth} from '../contexts'
 //import {FileKeeperIllustration} from '../components/icons/FileKeeperIllustration'
 import {FileKeeper} from "../components/icons/FileKeeper";
+import {GoogleIcon} from "../components/icons/GoogleIcon";
+import {MicrosoftIcon} from "../components/icons/MicrosoftIcon";
+import {GitHubIcon} from "../components/icons/GitHubIcon";
 
 const useStyles = makeStyles({
     root: {
@@ -119,6 +123,79 @@ const useStyles = makeStyles({
         marginTop: tokens.spacingVerticalL,
         textAlign: 'center',
     },
+
+    divider: {
+        display: 'flex',
+        alignItems: 'center',
+        textAlign: 'center',
+        ...shorthands.margin(tokens.spacingVerticalL, 0),
+        '::before': {
+            content: '""',
+            flex: 1,
+            ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke2),
+        },
+        '::after': {
+            content: '""',
+            flex: 1,
+            ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke2),
+        },
+    },
+    dividerText: {
+        ...shorthands.padding(0, tokens.spacingHorizontalM),
+        color: tokens.colorNeutralForeground3,
+    },
+
+    oauthContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        ...shorthands.gap(tokens.spacingVerticalM),
+    },
+
+    oauthButton: {
+        width: '100%',
+        justifyContent: 'flex-start',
+        ...shorthands.gap(tokens.spacingHorizontalM),
+    },
+
+    googleButton: {
+        backgroundColor: '#ffffff',
+        color: '#3c4043',
+        ...shorthands.border('1px', 'solid', '#dadce0'),
+        ':hover': {
+            backgroundColor: '#f8f9fa',
+            ...shorthands.border('1px', 'solid', '#d2e3fc'),
+            boxShadow: '0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15)',
+        },
+        ':active': {
+            backgroundColor: '#f1f3f4',
+        },
+    },
+
+    microsoftButton: {
+        backgroundColor: '#ffffff',
+        color: '#5e5e5e',
+        ...shorthands.border('1px', 'solid', '#8c8c8c'),
+        ':hover': {
+            backgroundColor: '#f3f2f1',
+            ...shorthands.border('1px', 'solid', '#8c8c8c'),
+        },
+        ':active': {
+            backgroundColor: '#edebe9',
+        },
+    },
+
+    githubButton: {
+        backgroundColor: '#24292e',
+        color: '#ffffff',
+        ...shorthands.border('1px', 'solid', '#24292e'),
+        ':hover': {
+            backgroundColor: '#2c3135',
+            ...shorthands.border('1px', 'solid', '#2c3135'),
+        },
+        ':active': {
+            backgroundColor: '#1b1f23',
+        },
+    },
 });
 
 export const SignIn = () => {
@@ -150,6 +227,22 @@ export const SignIn = () => {
         setPasswordVisible(!passwordVisible);
     };
 
+    // TODO: Implement OAuth authentication handlers
+    const handleGoogleSignIn = () => {
+        console.log('Google OAuth sign-in initiated');
+        // OAuth redirect logic will be implemented in backend integration
+    };
+
+    const handleMicrosoftSignIn = () => {
+        console.log('Microsoft OAuth sign-in initiated');
+        // OAuth redirect logic will be implemented in backend integration
+    };
+
+    const handleGitHubSignIn = () => {
+        console.log('GitHub OAuth sign-in initiated');
+        // OAuth redirect logic will be implemented in backend integration
+    };
+
     return (
         <div className={styles.root}>
             <div className={styles.card}>
@@ -166,6 +259,42 @@ export const SignIn = () => {
                         <Title3 as="h2">Sign In</Title3>
                         <Body1>Enter your details below to access your account.</Body1>
                     </header>
+
+                    <div className={styles.oauthContainer}>
+                        <Button
+                            appearance="secondary"
+                            size="large"
+                            className={mergeClasses(styles.oauthButton, styles.googleButton)}
+                            onClick={handleGoogleSignIn}
+                            icon={<GoogleIcon />}
+                        >
+                            Continue with Google
+                        </Button>
+
+                        <Button
+                            appearance="secondary"
+                            size="large"
+                            className={mergeClasses(styles.oauthButton, styles.microsoftButton)}
+                            onClick={handleMicrosoftSignIn}
+                            icon={<MicrosoftIcon />}
+                        >
+                            Continue with Microsoft
+                        </Button>
+
+                        <Button
+                            appearance="secondary"
+                            size="large"
+                            className={mergeClasses(styles.oauthButton, styles.githubButton)}
+                            onClick={handleGitHubSignIn}
+                            icon={<GitHubIcon />}
+                        >
+                            Continue with GitHub
+                        </Button>
+                    </div>
+
+                    <div className={styles.divider}>
+                        <Caption1 className={styles.dividerText}>or</Caption1>
+                    </div>
 
                     <form onSubmit={handleSubmit} className={styles.form}>
                         {error && (
